@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Add Open Cashdrawer, and Payment Fields to account.journal Form - it is in the POS Tab -->
+        <record id="pos_payment_method_view_form_hobex" model="ir.ui.view">
+            <field name="name">Hobex Payment Method Erweiterung</field>
+            <field name="model">pos.payment.method</field>
+            <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_form"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//field[@name='use_payment_terminal']/../.." position="after">
+                    <group name="hobex" string="Hobex" attrs="{'invisible': [('use_payment_terminal', '!=', 'hobex')]}">
+                        <div class="row">
+                            <div class="col-3">
+                                <img src="/pos_hobex/static/src/img/hobex_logo_3.png" alt="Hobex Logo"/>
+                            </div>
+                            <div class="col-6">
+                                <h2>Hobex Terminal Integration</h2>
+                                <p>
+                                    You do need a journal for each hobex terminal.<br/>
+                                    Please fill the username and password below, then fetch your auth token.<br/>
+                                </p>
+                            </div>
+                            <div class="col-3" >
+                                <button name="get_auth_token" type="object" string=" Get Auth" class="btn btn-primary fa fa-handshake-o" attrs="{'invisible': [('hobex_auth_token', '!=', False)]}"/>
+                                <br/>
+                                <field name="hobex_connected" readonly="1"/>
+                            </div>
+                        </div>
+                        <div class="row" attrs="{'invisible': [('active_pos_session_ids', '=', False)]}">
+                            <div class="col-12">
+                                <i class="fa fa-exclamation-circle" aria-hidden="true">Attention, there are active pos sessions based on this payment journal !</i>
+                            </div>
+                        </div>
+                        <group>
+                            <group string="Options">
+                                <field name="auto_validate"/>
+                                <field name="open_cashdrawer"/>
+                            </group>
+                            <group string="Hobex Authentication">
+                                <field name="active_pos_session_ids" invisible="1"/>
+                                <field name="hobex_terminal_mode"/>
+                                <field name="hobex_auth_token" invisible="1"/>
+                                <field name="hobex_api_address" groups="base.group_no_one"/>
+                                <field name="hobex_terminal_id"/>
+                                <field name="hobex_user"/>
+                                <field name="hobex_pass" password="True"/>
+                            </group>
+                        </group>
+                    </group>
+                </xpath>
+
+            </field>
+        </record>
+        <!-- Inherit Form View to Modify it -->
+        <!--
+        <record id="view_pos_pos_form" model="ir.ui.view">
+            <field name="name">view_pos_pos_form</field>
+            <field name="model">pos.order</field>
+            <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//field[@name='statement_ids']/tree/field[@name='statement_id']" position="after">
+                    <field name="hobex_transactionId"/>
+                    <field name="hobex_receipt"/>
+                </xpath>
+
+            </field>
+        </record>
+        -->
+    </data>
+</odoo>
