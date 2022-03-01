@@ -7,6 +7,10 @@ import requests
 from urllib.parse import urljoin
 
 from werkzeug.routing import ValidationError
+import uuid
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class PosPaymentMethod(models.Model):
@@ -53,12 +57,19 @@ class PosPaymentMethod(models.Model):
 
     @api.model
     def cron_renew_auth(self):
-        for journal in self.search([('use_payment_terminal', '=', 'hobex')]):
+        for journal in self.search([
+            ('use_payment_terminal', '=', 'hobex'),
+            ('hobex_user', '!=', False),
+            ('hobex_pass', '!=', False)
+        ]):
             try:
                 journal.get_auth_token()
             except:
                 # Called from cron - so just ignore it here
                 pass
+
+    def renew_auth_token(self):
+        self.get_auth_token()
 
     def get_auth_token(self):
         for method in self:
@@ -69,8 +80,28 @@ class PosPaymentMethod(models.Model):
             try:
                 result = requests.post(urljoin(method.hobex_api_address, "/api/account/login"), json=params, timeout=5)
                 method.hobex_auth_token = json.loads(result.content)['token']
-            except:
+            except UserError as ue:
+                raise ue
+            except Exception as e:
                 raise UserError(_(u'Hobex authentication failed. Please check credentials !'))
+
+    def sample_transaction(self):
+        self.ensure_one()
+        payload = {
+            "transaction": {
+                "transactionType": 1,
+                "transactionId": str(uuid.uuid4())[:20],
+                "tid": self.hobex_terminal_id,
+                "currency": "EUR",
+                "reference": str(uuid.uuid4())[:20],
+                "amount": 1.0
+            }
+        }
+        headers = {
+            'Token': self.hobex_auth_token,
+        }
+        result = requests.post(urljoin(self.hobex_api_address, "/api/transaction/payment"), json=payload, timeout=5, headers=headers)
+        _logger.info("Result Code: %s, Result: %s", result.status_code, result.content)
 
     def _check_required_if_hobex(self):
         """ If the field has 'required_if_terminal="hobex"' attribute, then it is required"""
