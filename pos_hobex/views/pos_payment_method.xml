@@ -15,13 +15,16 @@
                             <div>
                                 <img src="/pos_hobex/static/src/img/hobex_logo_3.png" alt="Hobex Logo"/>
                             </div>
-                            <div>
-                                <button name="get_auth_token" type="object" string=" Get Auth" class="btn btn-primary fa fa-handshake-o" attrs="{'invisible': [('hobex_auth_token', '!=', False)]}"/>
-                                <button name="renew_auth_token" type="object" string=" Renew Auth" class="btn btn-primary fa fa-handshake-o" attrs="{'invisible': ['!', ('hobex_auth_token', '!=', False)]}"/>
-                                <field name="hobex_connected" readonly="1" invisible="1"/>
-                            </div>
-                            <div>
-                                <button name="sample_transaction" type="object" string=" Sample Transaction" class="btn btn-primary fa fa-creditcard" attrs="{'invisible': [('hobex_auth_token', '=', False)]}"/>
+                            <div class="row">
+                                <div class="col-4">
+                                    <button name="get_auth_token" type="object" string="Check Connection" class="btn btn-primary fa fa-handshake-o" attrs="{'invisible': [('hobex_auth_token', '!=', False)]}"/>
+                                </div>
+                                <div class="col-4">
+                                    <button name="renew_auth_token" type="object" string="Renew Auth" class="btn btn-primary fa fa-handshake-o" attrs="{'invisible': ['!', ('hobex_auth_token', '!=', False)]}"/>
+                                </div>
+                                <div class="col-4">
+                                    <button name="sample_transaction" type="object" string="Sample Transaction" class="btn btn-primary fa fa-credit-card" attrs="{'invisible': [('hobex_auth_token', '=', False)]}"/>
+                                </div>
                             </div>
                         </div>
                         <div class="row" attrs="{'invisible': [('active_pos_session_ids', '=', False)]}">
@@ -30,9 +33,10 @@
                             </div>
                         </div>
                         <group string="Hobex Authentication">
+                            <field name="hobex_connected" readonly="1" invisible="1"/>
                             <field name="active_pos_session_ids" invisible="1"/>
                             <field name="hobex_terminal_mode"/>
-                            <field name="hobex_auth_token" invisible="0" readonly="1" force_save="1"/>
+                            <field name="hobex_auth_token" invisible="1" readonly="1" force_save="1"/>
                             <field name="hobex_api_address" groups="base.group_no_one"/>
                             <field name="hobex_terminal_id"/>
                             <field name="hobex_user"/>

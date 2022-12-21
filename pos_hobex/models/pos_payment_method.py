@@ -5,7 +5,7 @@ from odoo.exceptions import UserError
 import json
 import requests
 from urllib.parse import urljoin
-
+from requests.exceptions import ReadTimeout
 from werkzeug.routing import ValidationError
 import uuid
 import logging
@@ -90,7 +90,6 @@ class PosPaymentMethod(models.Model):
         payload = {
             "transaction": {
                 "transactionType": 1,
-                "transactionId": str(uuid.uuid4())[:20],
                 "tid": self.hobex_terminal_id,
                 "currency": "EUR",
                 "reference": str(uuid.uuid4())[:20],
@@ -100,7 +99,12 @@ class PosPaymentMethod(models.Model):
         headers = {
             'Token': self.hobex_auth_token,
         }
-        result = requests.post(urljoin(self.hobex_api_address, "/api/transaction/payment"), json=payload, timeout=5, headers=headers)
+        try:
+            result = requests.post(urljoin(self.hobex_api_address, "/api/transaction/payment"), json=payload, timeout=30, headers=headers)
+        except ReadTimeout as re:
+            raise UserError(_(u'Timeout after 30 seconds.'))
+        except Exception as e:
+            raise UserError(_(u'There was an error: %s') % (str(e), ))
         _logger.info("Result Code: %s, Result: %s", result.status_code, result.content)
 
     def _check_required_if_hobex(self):
