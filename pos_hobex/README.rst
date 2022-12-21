@@ -1,4 +1,4 @@
-.. image:: https://www.hobex.at/fileadmin/hobex/assets/images/layout/hobex_logo_3.png
+.. image:: https://www.hobex.at/typo3conf/ext/ad65_core/Resources/Public/img/branding/hobex-logo.png
   :width: 260
   :alt: Hobex Logo
   :align: center
@@ -31,10 +31,9 @@ https://online.hobex.at/login
 Installation
 ============
 * Das Modul installieren
-* Mit dem Hobex Terminal haben Sie die Z
-* Point of sale -> Konfiguration -> Payment Methods
-* Neue Payment Method anlegen
-* Payment Terminal Hobex auswählen
+* Kassensystem -> Konfiguration -> Zahlungsmethoden
+* Neue Zahlungsmethode anlegen
+* Zahlungsterminal Hobex auswählen
 * Cash Option darf nicht aktiviert sein
 * Fill in Terminal ID, Hobex User and Hobex Password
 * Choose Mode (there is a test mode)
