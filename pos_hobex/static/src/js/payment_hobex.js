@@ -49,7 +49,7 @@ var PaymentHobex = PaymentInterface.extend({
      */
     send_payment_request: function (cid) {
         var order = this.pos.get_order();
-        var line = order.paymentlines._byId[cid];
+        var line = order.paymentlines.find((line) => line.cid === cid);
         var data = {
             'transactionType': 1,
             'amount': Math.round(this.pos.get_order().selected_paymentline.amount / this.pos.currency.rounding) * this.pos.currency.rounding,
@@ -112,7 +112,7 @@ var PaymentHobex = PaymentInterface.extend({
     send_payment_cancel: function (order, cid) {
         return new Promise((resolve) => {
             // Hobex does not support to cancel running payment requests
-            order.trigger('hobex_error', {
+            order.pos.env.posbus.trigger('hobex_error', {
                 'title': _t('ACHTUNG'),
                 'body': _t('Zahlung bitte am Terminal abbrechen !'),
             });
@@ -132,7 +132,7 @@ var PaymentHobex = PaymentInterface.extend({
      */
     send_payment_reversal: function (cid) {
         var order = this.pos.get_order();
-        var line = order.paymentlines._byId[cid];
+        var line = order.paymentlines.find((line) => line.cid === cid);
         return new Promise((resolve) => {
             $.ajax({
                 url: this.payment_method.hobex_api_address + "/api/transaction/payment/" + line.payment_method.hobex_terminal_id + "/" + line.hobex_transactionId,

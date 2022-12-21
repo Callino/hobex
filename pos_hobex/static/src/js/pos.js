@@ -230,12 +230,12 @@ odoo.define('pos_hobex.pos', function (require) {
 
     // Add our hobex class to the global pos namespace
     var PosModelSuper = models.PosModel;
-    models.PosModel = models.PosModel.extend({
-        initialize: function (session, attributes) {
+    class PosModel extends models.PosGlobalState{
+        initialize(session, attributes) {
             // Call super call
             PosModelSuper.prototype.initialize.apply(this, arguments);
             // Do connect initialize Hobex Class
             this.hobex = new Hobex({'pos': this});
-        },
-    });
+        }
+    };
 });
