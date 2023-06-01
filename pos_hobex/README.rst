@@ -33,11 +33,12 @@ Installation
 * Das Modul installieren
 * Kassensystem -> Konfiguration -> Zahlungsmethoden
 * Neue Zahlungsmethode anlegen
+* Ein Bank Journal auswählen oder eine neues erstellen
 * Zahlungsterminal Hobex auswählen
-* Cash Option darf nicht aktiviert sein
-* Fill in Terminal ID, Hobex User and Hobex Password
-* Choose Mode (there is a test mode)
-* Press Button "Get Auth" to fetch first hobex auth token
+* Terminal ID, Hobex Benutzer und Passwort ausfüllen
+* Auswahl zwischen Test Modus und Echt Modus
+* Mit dem Button "Verbindung testen" die Zugangsdaten prüfen
+* Sind die Daten korrekt, so verschwindet der Button "Verbindung testen" und man erhält die Möglichkeit eine Beispiel Transaktion zu tätigen.
 
 Credits
 =======

@@ -31,7 +31,7 @@
             <span class="pos-receipt-left-align">Autorisierungscode</span>
             <span class="pos-receipt-right-align"><t t-raw="line.hobex_approvalCode"/></span>
         </div>
-        <div t-if="line.hobex_approvalCode">
+        <div t-if="line.hobex_aid">
             <span class="pos-receipt-left-align">AID</span>
             <span class="pos-receipt-right-align"><t t-raw="line.hobex_aid"/></span>
         </div>
@@ -39,14 +39,14 @@
             <span class="pos-receipt-left-align">RC: <t t-raw="line.hobex_responseCode"/></span>
             <span class="pos-receipt-right-align"><t t-raw="line.hobex_responseText"/></span>
         </div>
-        <div t-if="line.hobex_approvalCode">
+        <div t-if="line.hobex_actionCode">
             <span class="pos-receipt-left-align">Crypto</span>
             <span class="pos-receipt-right-align"><t t-raw="line.hobex_actionCode"/></span>
         </div>
-        <t t-if="line.cvm == 1">
-            <div style="text-align:center;">SIGNATURE</div>
-            <div style="width:100%;border-bottom:1px dotted;"/>
+        <t t-if="line.hobex_cvm == 1">
             <div style="text-align:center;">Unterschrift</div>
+            <div style="width:100%;border-bottom:1px dotted;"/>
+            <div style="text-align:center;height:2cm;"></div>
         </t>
     </t>
 
@@ -66,7 +66,7 @@
 
     <t t-name="OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension" owl="1">
         <xpath expr="//div[hasclass('before-footer')]" position="after">
-            <t t-foreach="receipt.paymentlines" t-as="line">
+            <t t-foreach="receipt.paymentlines" t-as="line" t-key="line.cid">
                 <t t-if="line.hobex_transactionId">
                     <div style="width:100%;border-bottom:1px dotted;"/>
                     <div style="text-align:center;">Hobex</div>

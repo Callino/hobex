@@ -8,7 +8,8 @@ odoo.define('pos_hobex.models', function (require) {
 
     models.register_payment_method('hobex', PaymentHobex);
 
-    // Extend Paymentline Model
+
+    // Extend Paymentline Model - so all hobex_ members will get into the data dict
     const HobexPaymentLine = (Payment) =>
         class extends Payment {
         apply_hobex_values(data) {
@@ -37,6 +38,5 @@ odoo.define('pos_hobex.models', function (require) {
             }
         }
     }
-
     Registries.Model.extend(Payment, HobexPaymentLine);
 });
