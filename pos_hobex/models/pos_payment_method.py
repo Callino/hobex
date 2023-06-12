@@ -45,12 +45,12 @@ class PosPaymentMethod(models.Model):
     hobex_terminal_mode = fields.Selection([
         ('testing', _(u"Testmode")),
         ('production', _(u"Production")),
-    ], required=True, default='production')
+    ], required=True, default='production', string="Terminal Mode")
     hobex_api_address = fields.Char('Terminal Address', compute='_compute_hobex_terminal_address', store=True)
-    hobex_user = fields.Char('Hobex User', required_if_terminal='hobex')
-    hobex_pass = fields.Char('Hobex Password', required_if_terminal='hobex')
-    hobex_auth_token = fields.Char('Hobex Token')
-    hobex_connected = fields.Boolean('Hobex Connected', compute='_compute_hobex_connected', store=True)
+    hobex_user = fields.Char('hobex User', required_if_terminal='hobex')
+    hobex_pass = fields.Char('hobex Password', required_if_terminal='hobex')
+    hobex_auth_token = fields.Char('Token')
+    hobex_connected = fields.Boolean('Connected', compute='_compute_hobex_connected', store=True)
     open_cashdrawer = fields.Boolean('Open Cashdrawer', default=False)
     auto_validate = fields.Boolean('Auto Validate', default=False)
     active_pos_session_ids = fields.Many2many('pos.session', string="Active POS Sessions", compute='_compute_active_pos_sessions')
@@ -83,7 +83,7 @@ class PosPaymentMethod(models.Model):
             except UserError as ue:
                 raise ue
             except Exception as e:
-                raise UserError(_(u'Hobex authentication failed. Please check credentials !'))
+                raise UserError(_(u'hobex authentication failed. Please check credentials !'))
 
     def sample_transaction(self):
         self.ensure_one()

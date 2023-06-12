@@ -31,7 +31,7 @@ class HobexController(Controller):
             )
             return Response(result.text, status=result.status_code, headers=dict(result.headers))
         except Exception as e:
-            _logger.info('Hobex Exception: %s', str(e))
+            _logger.info('hobex Exception: %s', str(e))
 
     @route('/hobex/api/transaction/payment/<int:method_id>/<string:transactionId>', type="http", auth="public", cors='*', csrf=False, methods=['DELETE'])
     def payment_reversal(self, method_id, transactionId):
@@ -50,4 +50,4 @@ class HobexController(Controller):
             )
             return Response(result.text, status=result.status_code, headers=dict(result.headers))
         except Exception as e:
-            _logger.info('Hobex Exception: %s', str(e))
+            _logger.info('hobex Exception: %s', str(e))

@@ -69,7 +69,7 @@
             <t t-foreach="receipt.paymentlines" t-as="line" t-key="line.cid">
                 <t t-if="line.hobex_transactionId">
                     <div style="width:100%;border-bottom:1px dotted;"/>
-                    <div style="text-align:center;">Hobex</div>
+                    <div style="text-align:center;">hobex</div>
                     <t t-call="HobexDetails"/>
                     <div style="width:100%;border-bottom:1px dotted;"/>
                 </t>

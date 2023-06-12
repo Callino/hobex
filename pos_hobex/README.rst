@@ -1,10 +1,10 @@
 .. image:: https://www.hobex.at/typo3conf/ext/ad65_core/Resources/Public/img/branding/hobex-logo.png
   :width: 260
-  :alt: Hobex Logo
+  :alt: hobex Logo
   :align: center
 
 ==============================
-POS Hobex Terminal Integration
+POS hobex Terminal Integration
 ==============================
 
 .. |badge1| image:: https://img.shields.io/badge/maturity-Production%2FStable-green.png
@@ -20,12 +20,12 @@ POS Hobex Terminal Integration
 |badge1| |badge2| |badge3|
 
 Dieses Modul ermöglicht das direkte Ansprechen unterstützter Terminals an der Odoo Kasse.
-Unterstützt werden alle Hobex Terminals, die das REST API unterstützen.
+Unterstützt werden alle hobex Terminals, die das REST API unterstützen.
 
 Portal für den Testmodus:
 https://hobexplus.brunn.hobex.at/login
 
-Hobex Online Portal:
+hobex Online Portal:
 https://online.hobex.at/login
 
 Installation
@@ -34,8 +34,8 @@ Installation
 * Kassensystem -> Konfiguration -> Zahlungsmethoden
 * Neue Zahlungsmethode anlegen
 * Ein Bank Journal auswählen oder eine neues erstellen
-* Zahlungsterminal Hobex auswählen
-* Terminal ID, Hobex Benutzer und Passwort ausfüllen
+* Zahlungsterminal hobex auswählen
+* Terminal ID, hobex Benutzer und Passwort ausfüllen
 * Auswahl zwischen Test Modus und Echt Modus
 * Mit dem Button "Verbindung testen" die Zugangsdaten prüfen
 * Sind die Daten korrekt, so verschwindet der Button "Verbindung testen" und man erhält die Möglichkeit eine Beispiel Transaktion zu tätigen.
@@ -49,6 +49,6 @@ Authors
 
 Sponsors
 ~~~~~~~~
-Im Auftrag der Hobex wurde dieses Modul durch die Callino entwickelt.
+Im Auftrag der hobex wurde dieses Modul durch die Callino entwickelt.
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
-    'name': 'Hobex Payment Terminal',
-    'summary': 'Hobex Payment Terminal Integration for Odoo POS',
+    'name': 'hobex Payment Terminal',
+    'summary': 'hobex Payment Terminal Integration for Odoo POS',
     'version': '16.0.1.0.0',
     'category': 'Point of Sale',
     'sequence': 6,

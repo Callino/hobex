@@ -74,7 +74,7 @@ var PaymentHobex = PaymentInterface.extend({
                         resolve(true);
                     } else {
                         self.pos.env.posbus.trigger('hobex_error', {
-                            'title': _t('Hobex Fehler'),
+                            'title': _t('hobex Fehler'),
                             'body': result['responseCode'] + ': ' + result['responseText'],
                         });
                         resolve(false);
@@ -82,7 +82,7 @@ var PaymentHobex = PaymentInterface.extend({
                 },
                 function failed(response) {
                     self.pos.env.posbus.trigger('hobex_error', {
-                        'title': _t('Hobex Fehler'),
+                        'title': _t('hobex Fehler'),
                         'body': _t(response.responseJSON.message),
                     });
                     resolve(false);
@@ -104,7 +104,7 @@ var PaymentHobex = PaymentInterface.extend({
      * @returns {Promise}
      */
     send_payment_cancel: function (order, cid) {
-        // Hobex does not support to cancel running payment requests
+        // hobex does not support to cancel running payment requests
         this.pos.env.posbus.trigger('hobex_error', {
             'title': _t('ACHTUNG'),
             'body': _t('Zahlung bitte am Terminal abbrechen !'),
@@ -141,7 +141,7 @@ var PaymentHobex = PaymentInterface.extend({
                 },
                 function failure(response) {
                     self.pos.env.posbus.trigger('hobex_error', {
-                        'title': _t('Hobex Fehler'),
+                        'title': _t('hobex Fehler'),
                         'body': _t(response.responseJSON.message),
                     });
                     resolve(false);

@@ -4,7 +4,7 @@
 
         <!-- Add Open Cashdrawer, and Payment Fields to account.journal Form - it is in the POS Tab -->
         <record id="pos_payment_method_view_form_hobex" model="ir.ui.view">
-            <field name="name">Hobex Payment Method Erweiterung</field>
+            <field name="name">hobex Payment Method Erweiterung</field>
             <field name="model">pos.payment.method</field>
             <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_form"/>
             <field name="arch" type="xml">
@@ -12,8 +12,10 @@
                 <xpath expr="//field[@name='use_payment_terminal']/../.." position="after">
                     <group name="hobex" attrs="{'invisible': [('use_payment_terminal', '!=', 'hobex')]}">
                         <div>
-                            <div>
-                                <img src="/pos_hobex/static/src/img/hobex_logo_3.png" alt="Hobex Logo"/>
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <img src="/pos_hobex/static/src/img/hobex_logo_3.png" alt="hobex Logo"/>
+                                </div>
                             </div>
                             <div class="row">
                                 <div class="col-4">
@@ -32,7 +34,7 @@
                                 <i class="fa fa-exclamation-circle" aria-hidden="true">Attention, there are active pos sessions based on this payment journal !</i>
                             </div>
                         </div>
-                        <group string="Hobex Authentication">
+                        <group string="hobex Authentication">
                             <field name="hobex_connected" readonly="1" invisible="1"/>
                             <field name="active_pos_session_ids" invisible="1"/>
                             <field name="hobex_terminal_mode"/>
