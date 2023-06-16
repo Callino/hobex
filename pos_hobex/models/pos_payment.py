@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
 
 from odoo import models, fields, api, _
+from urllib.parse import urljoin
+import requests
+from requests.exceptions import ReadTimeout
+from odoo.exceptions import UserError
+import logging
+import json
+
+_logger = logging.getLogger(__name__)
 
 
 class PosPayment(models.Model):
@@ -44,3 +52,32 @@ class PosPayment(models.Model):
             'hobex_cvm': payment.hobex_cvm,
         })
         return data
+
+    def hobex_refund(self):
+        for payment in self.filtered(lambda p: p.hobex_responseText == 'OK'):
+            if not self.payment_method_id.hobex_auth_token:
+                self.payment_method_id.get_auth_token()
+            headers = {
+                'Token': self.payment_method_id.hobex_auth_token,
+            }
+            try:
+                result = requests.delete(urljoin(
+                    self.payment_method_id.hobex_api_address,
+                    "/api/transaction/payment/%s/%s" % (payment.hobex_tid, payment.hobex_transactionId, )),
+                    timeout=30,
+                    headers=headers
+                )
+                if result.status_code != 200:
+                    res = json.loads(result.text)
+                    raise UserError(res['message'])
+                else:
+                    res = json.loads(result.text)
+                    _logger.info("Got response: %s" % res['responseText'])
+                    payment.hobex_responseText = res['responseText']
+                    payment.hobex_responseCode = res['responseCode']
+                _logger.info("Got result from refund: %s", result)
+            except ReadTimeout as re:
+                raise UserError(_(u'Timeout after 30 seconds.'))
+            except Exception as e:
+                raise UserError(_(u'There was an error: %s') % (str(e),))
+

@@ -47,10 +47,11 @@ class PosPaymentMethod(models.Model):
         ('production', _(u"Production")),
     ], required=True, default='production', string="Terminal Mode")
     hobex_api_address = fields.Char('Terminal Address', compute='_compute_hobex_terminal_address', store=True)
-    hobex_user = fields.Char('hobex User', required_if_terminal='hobex')
-    hobex_pass = fields.Char('hobex Password', required_if_terminal='hobex')
+    hobex_user = fields.Char('User', required_if_terminal='hobex')
+    hobex_pass = fields.Char('Password', required_if_terminal='hobex')
     hobex_auth_token = fields.Char('Token')
     hobex_connected = fields.Boolean('Connected', compute='_compute_hobex_connected', store=True)
+    hobex_transaction_ids = fields.One2many('pos.payment.hobex.transaction', 'pos_payment_method_id', string="Transactions", readonly=True)
     open_cashdrawer = fields.Boolean('Open Cashdrawer', default=False)
     auto_validate = fields.Boolean('Auto Validate', default=False)
     active_pos_session_ids = fields.Many2many('pos.session', string="Active POS Sessions", compute='_compute_active_pos_sessions')
@@ -78,10 +79,11 @@ class PosPaymentMethod(models.Model):
                 'password': method.hobex_pass
             }
             try:
-                result = requests.post(urljoin(method.hobex_api_address, "/api/account/login"), json=params, timeout=5)
+                result = requests.post(urljoin(method.hobex_api_address, "/api/account/login"), json=params, timeout=15)
+                if result.status_code == 401:
+                    res = json.loads(result.text)
+                    raise UserError(res['message'])
                 method.hobex_auth_token = json.loads(result.content)['token']
-            except UserError as ue:
-                raise ue
             except Exception as e:
                 raise UserError(_(u'hobex authentication failed. Please check credentials !'))
 

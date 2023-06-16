@@ -48,6 +48,19 @@
                             <field name="auto_validate"/>
                             <field name="open_cashdrawer"/>
                         </group>
+                        <group colspan="4" string="Transactions">
+                            <field name="hobex_transaction_ids" nolabel="1" colspan="2">
+                                <tree>
+                                    <field name="state"/>
+                                    <field name="transaction_date"/>
+                                    <field name="reference"/>
+                                    <field name="response_code"/>
+                                    <field name="response_text"/>
+                                    <field name="amount"/>
+                                    <field name="currency"/>
+                                </tree>
+                            </field>
+                        </group>
                     </group>
                 </xpath>
 

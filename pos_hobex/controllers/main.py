@@ -22,6 +22,26 @@ class HobexController(Controller):
             'Content-Type': 'application/json'
         }
         url = urljoin(payment_method.hobex_api_address, "/api/transaction/payment")
+        # Search for existing transaction
+        transaction = request.env['pos.payment.hobex.transaction'].sudo().search([
+            ('tid', '=', data['transaction']['tid']),
+            ('reference', '=', data['transaction']['reference']),
+        ], limit=1)
+        # do return the response we already got - but exclude aborted transactions - user may try again
+        if transaction and transaction.response_code is not False and transaction.response_code not in ['8004']:
+            headers = {
+                'Content-Type': 'application/json',
+            }
+            return Response(transaction.response, status=200, headers=headers)
+        transaction = request.env['pos.payment.hobex.transaction'].sudo().create({
+            'pos_payment_method_id': payment_method.id,
+            'reference': data['transaction']['reference'],
+            'transaction_type': data['transaction']['transactionType'],
+            'amount': data['transaction']['amount'],
+            'currency': data['transaction']['currency'],
+            'tid': data['transaction']['tid'],
+            'url': url,
+        })
         try:
             result = requests.post(
                 url,
@@ -29,9 +49,36 @@ class HobexController(Controller):
                 timeout=30,
                 headers=h,
             )
+            res = json.loads(result.text)
+            if res['responseCode'] == "0":
+                transaction.update({
+                    'response_code': res['responseCode'],
+                    'response_text': res['responseText'],
+                    'response': result.text,
+                    'state': 'ok',
+                })
+            else:
+                transaction.update({
+                    'response_code': res['responseCode'],
+                    'response_text': res['responseText'],
+                    'response': result.text,
+                    'state': 'failed',
+                })
             return Response(result.text, status=result.status_code, headers=dict(result.headers))
         except Exception as e:
+            transaction.update({
+                'state': 'failed',
+                'message': str(e),
+            })
             _logger.info('hobex Exception: %s', str(e))
+            headers = {
+                'Content-Type': 'application/json',
+            }
+            return Response(json.dumps({
+                'responseCode': '-1',
+                'responseText': 'Timeout on transaction request',
+            }), status=200, headers=headers)
+
 
     @route('/hobex/api/transaction/payment/<int:method_id>/<string:transactionId>', type="http", auth="public", cors='*', csrf=False, methods=['DELETE'])
     def payment_reversal(self, method_id, transactionId):

@@ -43,13 +43,25 @@ var PaymentHobex = PaymentInterface.extend({
         var order = this.pos.get_order();
         var self = this;
         var line = order.selected_paymentline;
+        if (!line.transaction_id) {
+            line.transaction_id = Date.now();
+        }
+        if (line.amount < 0) {
+            return new Promise((resolve) => {
+                self.pos.env.posbus.trigger('hobex_error', {
+                    'title': _t('Negative Beträge nicht möglich.'),
+                    'body': _t('Es ist nicht möglich einen negativen Betrag zurückzubuchen.'),
+                });
+                resolve(false);
+            });
+        }
         line.set_payment_status('waitingCard');
         var data = {
             'transactionType': 1,
             'amount': Math.round(line.amount / this.pos.currency.rounding) * this.pos.currency.rounding,
             'currency': this.pos.currency.name,
             'tid': line.payment_method.hobex_terminal_id,
-            'reference': line.sequence_number,
+            'reference': line.transaction_id,
             'pos_payment_mode_id': line.payment_method.id,
         };
         return new Promise((resolve) => {
