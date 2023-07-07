@@ -54,30 +54,34 @@ class PosPayment(models.Model):
         return data
 
     def hobex_refund(self):
-        for payment in self.filtered(lambda p: p.hobex_responseText == 'OK'):
-            if not self.payment_method_id.hobex_auth_token:
-                self.payment_method_id.get_auth_token()
-            headers = {
-                'Token': self.payment_method_id.hobex_auth_token,
-            }
-            try:
-                result = requests.delete(urljoin(
-                    self.payment_method_id.hobex_api_address,
-                    "/api/transaction/payment/%s/%s" % (payment.hobex_tid, payment.hobex_transactionId, )),
-                    timeout=30,
-                    headers=headers
-                )
-                if result.status_code != 200:
-                    res = json.loads(result.text)
-                    raise UserError(res['message'])
-                else:
-                    res = json.loads(result.text)
-                    _logger.info("Got response: %s" % res['responseText'])
-                    payment.hobex_responseText = res['responseText']
-                    payment.hobex_responseCode = res['responseCode']
-                _logger.info("Got result from refund: %s", result)
-            except ReadTimeout as re:
-                raise UserError(_(u'Timeout after 30 seconds.'))
-            except Exception as e:
-                raise UserError(_(u'There was an error: %s') % (str(e),))
+        self.ensure_one()
+        payment = self
+        if not (payment.hobex_responseText == 'OK' and payment.hobex_transactionType == 'SELL'):
+            raise UserError('Only successfull transactions can get refunded !')
+        if not payment.payment_method_id.hobex_auth_token:
+            payment.payment_method_id.get_auth_token()
+        headers = {
+            'Token': payment.payment_method_id.hobex_auth_token,
+        }
+        try:
+            result = requests.delete(urljoin(
+                payment.payment_method_id.hobex_api_address,
+                "/api/transaction/payment/%s/%s" % (payment.hobex_tid, payment.hobex_transactionId, )),
+                timeout=30,
+                headers=headers
+            )
+            if result.status_code != 200:
+                res = json.loads(result.text)
+                raise UserError(res['message'])
+            else:
+                res = json.loads(result.text)
+                _logger.info("Got response: %s" % res['responseText'])
+                payment.hobex_responseText = res['responseText']
+                payment.hobex_responseCode = res['responseCode']
+                payment.hobex_transactionType = 'REFUNDED'
+            _logger.info("Got result from refund: %s", result)
+        except ReadTimeout as re:
+            raise UserError(_(u'Timeout after 30 seconds.'))
+        except Exception as e:
+            raise UserError(_(u'There was an error: %s') % (str(e),))
 

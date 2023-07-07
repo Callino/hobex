@@ -30,7 +30,7 @@
                         <field name="hobex_responseText"/>
                         <field name="hobex_cvm"/>
                     </group>
-                    <group string="Rückerstattung">
+                    <group string="Rückerstattung" attrs="{'invisible': ['|',('hobex_transactionType', '!=', 'SELL'),('hobex_responseText', '!=', 'OK')]}">
                         <button type="object" name="hobex_refund" string="Rückerstatten"/>
                     </group>
                 </group>

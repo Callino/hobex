@@ -33,6 +33,9 @@ class HobexController(Controller):
                 'Content-Type': 'application/json',
             }
             return Response(transaction.response, status=200, headers=headers)
+        if transaction:
+            # if we do have a transaction here - then it is an aborted transaction - so delete it to avoid unique references
+            transaction.unlink()
         transaction = request.env['pos.payment.hobex.transaction'].sudo().create({
             'pos_payment_method_id': payment_method.id,
             'reference': data['transaction']['reference'],
