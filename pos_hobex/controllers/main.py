@@ -49,7 +49,7 @@ class HobexController(Controller):
             result = requests.post(
                 url,
                 data=json.dumps(data),
-                timeout=30,
+                timeout=120,
                 headers=h,
             )
             res = json.loads(result.text)
