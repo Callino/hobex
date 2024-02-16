@@ -15,6 +15,9 @@
         'views/pos_payment.xml',
         'data/cron.xml',
     ],
+    'images': [
+        'static/description/banner.png',
+    ],
     'assets': {
         'point_of_sale.assets': [
             "pos_hobex/static/src/js/models.js",
