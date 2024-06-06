@@ -20,11 +20,11 @@
         <div style="width:100%;border-bottom:1px dotted;"/>
         <div t-if="line.hobex_transactionType=='SELL'">
             <span class="pos-receipt-left-align">KAUF</span>
-            <span class="pos-receipt-right-align"><t t-raw='env.pos.format_currency_no_symbol(line.amount)' /></span>
+            <span class="pos-receipt-right-align"><t t-raw='props.formatCurrency(line.amount)' /></span>
         </div>
         <div t-if="line.hobex_transactionType=='VOID'">
             <span class="pos-receipt-left-align">STORNO</span>
-            <span class="pos-receipt-right-align"><t t-raw='env.pos.format_currency_no_symbol(line.amount)' /></span>
+            <span class="pos-receipt-right-align"><t t-raw='props.formatCurrency(line.amount)' /></span>
         </div>
         <div style="width:100%;border-bottom:1px dotted;"/>
         <div t-if="line.hobex_approvalCode">
@@ -66,7 +66,7 @@
 
     <t t-name="OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension" owl="1">
         <xpath expr="//div[hasclass('before-footer')]" position="after">
-            <t t-foreach="receipt.paymentlines" t-as="line" t-key="line.cid">
+            <t t-foreach="props.data.paymentlines" t-as="line" t-key="line_index">
                 <t t-if="line.hobex_transactionId">
                     <div style="width:100%;border-bottom:1px dotted;"/>
                     <div style="text-align:center;">hobex</div>

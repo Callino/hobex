@@ -10,7 +10,7 @@
             <field name="arch" type="xml">
 
                 <xpath expr="//field[@name='use_payment_terminal']/../.." position="after">
-                    <group name="hobex" attrs="{'invisible': [('use_payment_terminal', '!=', 'hobex')]}">
+                    <group name="hobex" invisible="use_payment_terminal != 'hobex'">
                         <div>
                             <div class="row mb-3">
                                 <div class="col-12">
@@ -19,17 +19,17 @@
                             </div>
                             <div class="row">
                                 <div class="col-4">
-                                    <button name="get_auth_token" type="object" string="Check Connection" class="btn btn-primary fa fa-handshake-o" attrs="{'invisible': [('hobex_auth_token', '!=', False)]}"/>
+                                    <button name="get_auth_token" type="object" string="Check Connection" class="btn btn-primary fa fa-handshake-o" invisible="hobex_auth_token != False"/>
                                 </div>
                                 <div class="col-4">
-                                    <button name="renew_auth_token" type="object" string="Renew Auth" class="btn btn-primary fa fa-handshake-o" attrs="{'invisible': ['!', ('hobex_auth_token', '!=', False)]}"/>
+                                    <button name="renew_auth_token" type="object" string="Renew Auth" class="btn btn-primary fa fa-handshake-o" invisible="hobex_auth_token != False"/>
                                 </div>
                                 <div class="col-4">
-                                    <button name="sample_transaction" type="object" string="Sample Transaction" class="btn btn-primary fa fa-credit-card" attrs="{'invisible': [('hobex_auth_token', '=', False)]}"/>
+                                    <button name="sample_transaction" type="object" string="Sample Transaction" class="btn btn-primary fa fa-credit-card" invisible="hobex_auth_token == False"/>
                                 </div>
                             </div>
                         </div>
-                        <div class="row" attrs="{'invisible': [('active_pos_session_ids', '=', False)]}">
+                        <div class="row" invisible="active_pos_session_ids == False">
                             <div class="col-12">
                                 <i class="fa fa-exclamation-circle" aria-hidden="true">Attention, there are active pos sessions based on this payment journal !</i>
                             </div>

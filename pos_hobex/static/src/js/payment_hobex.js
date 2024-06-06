@@ -1,14 +1,10 @@
-odoo.define('pos_hobex.payment', function (require) {
-"use strict";
-
-const { Gui } = require('point_of_sale.Gui');
-var core = require('web.core');
-var PaymentInterface = require('point_of_sale.PaymentInterface');
-
-var _t = core._t;
+/** @odoo-module */
+import { PaymentInterface } from "@point_of_sale/app/payment/payment_interface";
+import { register_payment_method } from "@point_of_sale/app/store/pos_store";
+import { _t } from "@web/core/l10n/translation";
 
 
-var PaymentHobex = PaymentInterface.extend({
+export class PaymentHobex extends PaymentInterface{
 
     //--------------------------------------------------------------------------
     // Public
@@ -17,10 +13,10 @@ var PaymentHobex = PaymentInterface.extend({
     /**
      * @override
      */
-    init: function () {
-        this._super.apply(this, arguments);
+    setup() {
+        super.setup(...arguments);
         this.enable_reversals();
-    },
+    }
 
     /**
      * Called when a user clicks the "Send" button in the
@@ -38,8 +34,8 @@ var PaymentHobex = PaymentInterface.extend({
      * the payment should be retried. Rejected when the status of the
      * paymentline will be manually updated.
      */
-    send_payment_request: function (cid) {
-        this._super.apply(this, arguments);
+    async send_payment_request(cid) {
+        await super.send_payment_request(...arguments);
         var order = this.pos.get_order();
         var self = this;
         var line = order.selected_paymentline;
@@ -85,7 +81,7 @@ var PaymentHobex = PaymentInterface.extend({
                         }
                         resolve(true);
                     } else {
-                        self.pos.env.posbus.trigger('hobex_error', {
+                        self.pos.env.bus.trigger('hobex_error', {
                             'title': _t('hobex Fehler'),
                             'body': result['responseCode'] + ': ' + result['responseText'],
                         });
@@ -93,7 +89,7 @@ var PaymentHobex = PaymentInterface.extend({
                     }
                 },
                 function failed(response) {
-                    self.pos.env.posbus.trigger('hobex_error', {
+                    self.pos.env.bus.trigger('hobex_error', {
                         'title': _t('hobex Fehler'),
                         'body': _t(response.responseJSON.message),
                     });
@@ -101,7 +97,7 @@ var PaymentHobex = PaymentInterface.extend({
                 }
             );
         });
-    },
+    }
 
     /**
      * Called when a user removes a payment line that's still waiting
@@ -115,16 +111,16 @@ var PaymentHobex = PaymentInterface.extend({
      * @param {string} cid - The id of the paymentline
      * @returns {Promise}
      */
-    send_payment_cancel: function (order, cid) {
-        // hobex does not support to cancel running payment requests
-        this.pos.env.posbus.trigger('hobex_error', {
+    send_payment_cancel(order, cid) {
+        // Hobex does not support to cancel running payment requests
+        this.pos.env.bus.trigger('hobex_error', {
             'title': _t('ACHTUNG'),
             'body': _t('Zahlung bitte am Terminal abbrechen !'),
         });
         return new Promise((resolve) => {
             resolve(true);
         });
-    },
+    }
 
     /**
      * This is an optional method. When implementing this make sure to
@@ -136,8 +132,8 @@ var PaymentHobex = PaymentInterface.extend({
      * @param {string} cid - The id of the paymentline
      * @returns {Promise} returns true if the reversal was successful.
      */
-    send_payment_reversal: function (cid) {
-        this._super.apply(this, arguments);
+    async send_payment_reversal(cid) {
+        await super.send_payment_reversal(...arguments);
         var order = this.pos.get_order();
         var self = this;
         var line = order.selected_paymentline;
@@ -152,7 +148,7 @@ var PaymentHobex = PaymentInterface.extend({
                     resolve(true);
                 },
                 function failure(response) {
-                    self.pos.env.posbus.trigger('hobex_error', {
+                    self.pos.env.bus.trigger('hobex_error', {
                         'title': _t('hobex Fehler'),
                         'body': _t(response.responseJSON.message),
                     });
@@ -160,16 +156,12 @@ var PaymentHobex = PaymentInterface.extend({
                 }
             );
         });
-    },
+    }
 
     /**
      * Called when the payment screen in the POS is closed (by
      * e.g. clicking the "Back" button). Could be used to cancel in
      * progress payments.
      */
-    close: function () {},
-});
-
-return PaymentHobex;
-
-});
+    close() {}
+};
