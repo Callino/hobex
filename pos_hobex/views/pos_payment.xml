@@ -11,9 +11,9 @@
                     <group string="Transaktion">
                         <field name="hobex_receipt"/>
                         <field name="hobex_approvalCode"/>
-                        <field name="hobex_actionCode" attrs="{'invisible': [('hobex_actionCode', '=', False)]}"/>
-                        <field name="hobex_aid" attrs="{'invisible': [('hobex_aid', '=', False)]}"/>
-                        <field name="hobex_reference" attrs="{'invisible': [('hobex_reference', '=', False)]}"/>
+                        <field name="hobex_actionCode" invisible="hobex_actionCode == False"/>
+                        <field name="hobex_aid" invisible="hobex_aid == False"/>
+                        <field name="hobex_reference" invisible="hobex_reference == False"/>
                         <field name="hobex_tid"/>
                         <field name="hobex_transactionId"/>
                         <field name="hobex_transactionDate"/>
@@ -30,7 +30,7 @@
                         <field name="hobex_responseText"/>
                         <field name="hobex_cvm"/>
                     </group>
-                    <group string="Rückerstattung" attrs="{'invisible': ['|',('hobex_transactionType', '!=', 'SELL'),('hobex_responseText', '!=', 'OK')]}">
+                    <group string="Rückerstattung" invisible="hobex_transactionType != 'SELL' or hobex_responseText != 'OK'">
                         <button type="object" name="hobex_refund" string="Rückerstatten"/>
                     </group>
                 </group>
