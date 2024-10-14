@@ -53,6 +53,22 @@ class HobexController(Controller):
                 headers=h,
             )
             res = json.loads(result.text)
+            if res['responseCode'] == "0" and res['cvm'] == 1:
+                # We do fetch the receipt from hobex - and include it in the response
+                receipt_url = urljoin(payment_method.hobex_api_address, "/api/transaction/download")
+                receipt_result = requests.get(
+                    receipt_url,
+                    params={
+                        'tid': data['transaction']['tid'],
+                        'transactionId': res['transactionId'],
+                        'width': 32,
+                        'type': 'txt',
+                        'raw': True,
+                    },
+                    timeout=10,
+                    headers=h,
+                )
+                res['cvm_receipt'] = receipt_result.text
             if res['responseCode'] == "0":
                 transaction.update({
                     'response_code': res['responseCode'],
@@ -67,7 +83,7 @@ class HobexController(Controller):
                     'response': result.text,
                     'state': 'failed',
                 })
-            return Response(result.text, status=result.status_code, headers=dict(result.headers))
+            return Response(json.dumps(res), status=result.status_code, headers=dict(result.headers))
         except Exception as e:
             transaction.update({
                 'state': 'failed',

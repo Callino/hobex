@@ -76,8 +76,12 @@ export class PaymentHobex extends PaymentInterface{
                         for (const [key, value] of Object.entries(result)) {
                           line['hobex_'+key] = value;
                         }
-                        if (result.cvm === 1) {
-                            this.print_receipt(line);
+                        if (result.cvm === 1 && self.pos.env.proxy.printer && result['cvm_receipt']) {
+                            self.pos.env.proxy.printer.print_receipt(
+                        "<div class='pos-receipt'><div class='pos-payment-terminal-receipt'>" +
+                                result['cvm_receipt'].replace(/\r\n/g, "<br/>") +
+                                "</div></div>"
+                            );
                         }
                         resolve(true);
                     } else {
