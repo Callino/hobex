@@ -52,9 +52,13 @@ class PosPaymentMethod(models.Model):
     hobex_auth_token = fields.Char('Token')
     hobex_connected = fields.Boolean('Connected', compute='_compute_hobex_connected', store=True)
     hobex_transaction_ids = fields.One2many('pos.payment.hobex.transaction', 'pos_payment_method_id', string="Transactions", readonly=True)
-    open_cashdrawer = fields.Boolean('Open Cashdrawer', default=False)
-    auto_validate = fields.Boolean('Auto Validate', default=False)
     active_pos_session_ids = fields.Many2many('pos.session', string="Active POS Sessions", compute='_compute_active_pos_sessions')
+
+    @api.model
+    def _load_pos_data_fields(self, config_id):
+        params = super()._load_pos_data_fields(config_id)
+        params += ['hobex_terminal_id']
+        return params
 
     @api.model
     def cron_renew_auth(self):
@@ -67,6 +71,7 @@ class PosPaymentMethod(models.Model):
                 journal.get_auth_token()
             except:
                 # Called from cron - so just ignore it here
+                _logger.error(_(u'hobex authentication failed. Please check credentials !'))
                 pass
 
     def renew_auth_token(self):
@@ -85,7 +90,7 @@ class PosPaymentMethod(models.Model):
                     raise UserError(res['message'])
                 method.hobex_auth_token = json.loads(result.content)['token']
             except Exception as e:
-                raise UserError(_(u'hobex authentication failed. Please check credentials !'))
+                raise UserError(_(u'hobex Authentication failed. Please check credentials !'))
 
     def sample_transaction(self):
         self.ensure_one()
@@ -106,7 +111,7 @@ class PosPaymentMethod(models.Model):
         except ReadTimeout as re:
             raise UserError(_(u'Timeout after 30 seconds.'))
         except Exception as e:
-            raise UserError(_(u'There was an error: %s') % (str(e), ))
+            raise UserError(_('There was an error: %(error)s', error=str(e)))
         _logger.info("Result Code: %s, Result: %s", result.status_code, result.content)
 
     def _check_required_if_hobex(self):

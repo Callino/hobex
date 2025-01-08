@@ -2,7 +2,7 @@
 {
     'name': 'hobex Payment Terminal',
     'summary': 'hobex Payment Terminal Integration for Odoo POS',
-    'version': '17.0.1.0',
+    'version': '18.0.1.0.0',
     'category': 'Point of Sale',
     'sequence': 6,
     'website': 'https://github.com/callino/hobex',
@@ -20,9 +20,7 @@
     ],
     'assets': {
         'point_of_sale._assets_pos': [
-            "pos_hobex/static/src/js/models.js",
-            "pos_hobex/static/src/js/payment_hobex.js",
-            "pos_hobex/static/src/js/Screens/PaymentScreen/PaymentScreen.js",
+            'pos_hobex/static/src/**/*',
             "pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml",
         ],
     },

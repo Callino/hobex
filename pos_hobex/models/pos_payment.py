@@ -31,6 +31,18 @@ class PosPayment(models.Model):
     hobex_responseText = fields.Char('hobex Response Text')
     hobex_cvm = fields.Char('hobex CVM')
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        '''
+        Copy brand and card number from hobex to pos.payment.method. fields
+        '''
+        for vals in vals_list:
+            if 'hobex_brand' in vals and 'card_brand' not in vals:
+                vals['card_brand'] = vals['hobex_brand']
+            if 'hobex_cardNumber' in vals and 'card_no' not in vals:
+                vals['card_no'] = vals['hobex_cardNumber'][-4:]
+        return super().create(vals_list)
+
     def _export_for_ui(self, payment):
         data = super(PosPayment, self)._export_for_ui(payment)
         data.update({
@@ -57,7 +69,7 @@ class PosPayment(models.Model):
         self.ensure_one()
         payment = self
         if not (payment.hobex_responseText == 'OK' and payment.hobex_transactionType == 'SELL'):
-            raise UserError('Only successfull transactions can get refunded !')
+            raise UserError(_('Only successfull transactions can get refunded !'))
         if not payment.payment_method_id.hobex_auth_token:
             payment.payment_method_id.get_auth_token()
         headers = {
@@ -83,5 +95,5 @@ class PosPayment(models.Model):
         except ReadTimeout as re:
             raise UserError(_(u'Timeout after 30 seconds.'))
         except Exception as e:
-            raise UserError(_(u'There was an error: %s') % (str(e),))
+            raise UserError(_("There was an error: %(error)s", error=str(e)))
 

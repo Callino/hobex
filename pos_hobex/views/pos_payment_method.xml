@@ -44,13 +44,9 @@
                             <field name="hobex_user"/>
                             <field name="hobex_pass" password="True"/>
                         </group>
-                        <group string="Options">
-                            <field name="auto_validate"/>
-                            <field name="open_cashdrawer"/>
-                        </group>
                         <group colspan="4" string="Transactions">
                             <field name="hobex_transaction_ids" nolabel="1" colspan="2">
-                                <tree>
+                                <list>
                                     <field name="state"/>
                                     <field name="transaction_date"/>
                                     <field name="reference"/>
@@ -58,7 +54,7 @@
                                     <field name="response_text"/>
                                     <field name="amount"/>
                                     <field name="currency"/>
-                                </tree>
+                                </list>
                             </field>
                         </group>
                     </group>
@@ -73,8 +69,7 @@
             <field name="model">pos.order</field>
             <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
             <field name="arch" type="xml">
-
-                <xpath expr="//field[@name='statement_ids']/tree/field[@name='statement_id']" position="after">
+]list/field[@name='statement_id']" position="after">
                     <field name="hobex_transactionId"/>
                     <field name="hobex_receipt"/>
                 </xpath>

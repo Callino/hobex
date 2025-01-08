@@ -1,7 +1,7 @@
-/** @odoo-module */
+import { useService } from "@web/core/utils/hooks";
 import { PaymentInterface } from "@point_of_sale/app/payment/payment_interface";
-import { register_payment_method } from "@point_of_sale/app/store/pos_store";
 import { _t } from "@web/core/l10n/translation";
+import { rpc } from "@web/core/network/rpc";
 
 
 export class PaymentHobex extends PaymentInterface{
@@ -36,15 +36,14 @@ export class PaymentHobex extends PaymentInterface{
      */
     async send_payment_request(cid) {
         await super.send_payment_request(...arguments);
-        var order = this.pos.get_order();
         var self = this;
-        var line = order.selected_paymentline;
+        const line = this.pos.get_order().get_selected_paymentline();
         if (!line.transaction_id) {
             line.transaction_id = Date.now();
         }
         if (line.amount < 0) {
             return new Promise((resolve) => {
-                self.pos.env.posbus.trigger('hobex_error', {
+                self.pos.env.bus.trigger('hobex_error', {
                     'title': _t('Negative Beträge nicht möglich.'),
                     'body': _t('Es ist nicht möglich einen negativen Betrag zurückzubuchen.'),
                 });
@@ -52,36 +51,35 @@ export class PaymentHobex extends PaymentInterface{
             });
         }
         line.set_payment_status('waitingCard');
-        var data = {
+        let data = {
             'transactionType': 1,
             'amount': Math.round(line.amount / this.pos.currency.rounding) * this.pos.currency.rounding,
             'currency': this.pos.currency.name,
-            'tid': line.payment_method.hobex_terminal_id,
+            'tid': line.payment_method_id.hobex_terminal_id,
             'reference': line.transaction_id,
-            'pos_payment_mode_id': line.payment_method.id,
+            'pos_payment_mode_id': line.payment_method_id.id,
         };
         return new Promise((resolve) => {
             this.transactionResolve = resolve;
-            $.ajax({
-                url: "/hobex/api/transaction/payment",
-                type: 'post',
-                data: JSON.stringify({
+            rpc(
+                "/hobex/api/transaction/payment",
+                {
                     'transaction': data,
-                }),
-                contentType: "application/json",
-                timeout: 120000,
-            }).then(
-                function done(result) {
+                },
+                {
+                    timeout: 120000,
+                }
+            ).then(
+                (result) => {
                     if (result.responseCode === "0") {
                         for (const [key, value] of Object.entries(result)) {
                           line['hobex_'+key] = value;
                         }
                         if (result.cvm === 1 && self.pos.hardwareProxy.printer && result['cvm_receipt']) {
-                            self.pos.hardwareProxy.printer.printReceipt(
-                        "<div class='pos-receipt'><div class='pos-payment-terminal-receipt'>" +
-                                result['cvm_receipt'].replace(/\r\n/g, "<br/>") +
-                                "</div></div>"
-                            );
+                            let div = document.createElement('div');
+                            div.classList.add('pos-receipt');
+                            div.innerHTML = "<div class='pos-payment-terminal-receipt'>" + result['cvm_receipt'].replace(/\r\n/g, "<br/>") + "</div>"
+                            self.pos.hardwareProxy.printer.printReceipt(div);
                         }
                         resolve(true);
                     } else {
@@ -89,17 +87,18 @@ export class PaymentHobex extends PaymentInterface{
                             'title': _t('hobex Fehler'),
                             'body': result['responseCode'] + ': ' + result['responseText'],
                         });
+                        // False will set the payment line to retry
                         resolve(false);
                     }
                 },
-                function failed(response) {
-                    self.pos.env.bus.trigger('hobex_error', {
-                        'title': _t('hobex Fehler'),
-                        'body': _t(response.responseJSON.message),
-                    });
-                    resolve(false);
-                }
-            );
+            ).catch(reason => {
+                self.pos.env.bus.trigger('hobex_error', {
+                    'title': _t('Allgemeiner Fehler'),
+                    'body': _t('Es ist bei der Anfrage ein Fehler aufgetreten.'),
+                });
+                resolve(false);
+                line.set_payment_status('error');
+            });
         });
     }
 
@@ -138,16 +137,18 @@ export class PaymentHobex extends PaymentInterface{
      */
     async send_payment_reversal(cid) {
         await super.send_payment_reversal(...arguments);
-        var order = this.pos.get_order();
         var self = this;
-        var line = order.selected_paymentline;
+        var line = this.pos.get_order().get_selected_paymentline();
         line.set_payment_status('reversing');
         return new Promise((resolve) => {
-            $.ajax({
-                url: "/hobex/api/transaction/payment/" + line.payment_method.id + "/" + line.hobex_transactionId,
-                type: 'delete',
-                timeout: 120000,
-            }).then(
+            rpc(
+                "/hobex/api/transaction/payment/" + line.payment_method_id.id + "/" + line.hobex_transactionId,
+                {
+                },
+                {
+                    timeout: 120000,
+                }
+            ).then(
                 function done(result) {
                     resolve(true);
                 },
