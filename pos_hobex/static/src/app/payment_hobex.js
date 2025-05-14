@@ -1,6 +1,5 @@
-import { useService } from "@web/core/utils/hooks";
-import { PaymentInterface } from "@point_of_sale/app/payment/payment_interface";
 import { _t } from "@web/core/l10n/translation";
+import { PaymentInterface } from "@point_of_sale/app/payment/payment_interface";
 import { rpc } from "@web/core/network/rpc";
 
 
@@ -41,11 +40,11 @@ export class PaymentHobex extends PaymentInterface{
         if (!line.transaction_id) {
             line.transaction_id = Date.now();
         }
-        if (line.amount < 0) {
+        if (line.amount <= 0) {
             return new Promise((resolve) => {
                 self.pos.env.bus.trigger('hobex_error', {
-                    'title': _t('Negative Beträge nicht möglich.'),
-                    'body': _t('Es ist nicht möglich einen negativen Betrag zurückzubuchen.'),
+                    'title': _t('Negative und Null Beträge nicht möglich.'),
+                    'body': _t('Es ist nicht möglich einen Negativen oder Null Betrag mit dieser Zahlungsmethode zu zahlen.'),
                 });
                 resolve(false);
             });
@@ -169,4 +168,4 @@ export class PaymentHobex extends PaymentInterface{
      * progress payments.
      */
     close() {}
-};
+}

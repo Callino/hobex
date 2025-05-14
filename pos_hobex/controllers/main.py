@@ -10,6 +10,7 @@ _logger = logging.getLogger(__name__)
 
 
 class HobexController(Controller):
+
     @route('/hobex/api/transaction/payment', type="http", auth="public", cors='*', csrf=False, methods=['POST'])
     def payment(self):
         data = json.loads(request.httprequest.data.decode('utf-8'))
