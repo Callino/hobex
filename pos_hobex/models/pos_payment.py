@@ -5,10 +5,7 @@ from urllib.parse import urljoin
 import requests
 from requests.exceptions import ReadTimeout
 from odoo.exceptions import UserError
-import logging
 import json
-
-_logger = logging.getLogger(__name__)
 
 
 class PosPayment(models.Model):
@@ -75,13 +72,10 @@ class PosPayment(models.Model):
                 raise UserError(res['message'])
             else:
                 res = json.loads(result.text)
-                _logger.info("Got response: %s" % res['responseText'])
                 payment.hobex_responseText = res['responseText']
                 payment.hobex_responseCode = res['responseCode']
                 payment.hobex_transactionType = 'REFUNDED'
-            _logger.info("Got result from refund: %s", result)
         except ReadTimeout as re:
             raise UserError(_(u'Timeout after 30 seconds.'))
         except Exception as e:
             raise UserError(_(u'There was an error: %s') % (str(e),))
-
