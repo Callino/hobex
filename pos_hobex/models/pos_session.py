@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
-
 from odoo import models, fields, api, _
-import logging
-
-_logger = logging.getLogger(__name__)
+from odoo.osv.expression import AND, OR
 
 
 class POSSession(models.Model):
@@ -12,6 +9,5 @@ class POSSession(models.Model):
 
     def _loader_params_pos_payment_method(self):
         params = super(POSSession, self)._loader_params_pos_payment_method()
-        params['search_params']['fields'].extend(
-            ["hobex_terminal_id", "hobex_api_address", "hobex_auth_token"])
+        params['search_params']['fields'].extend(["hobex_terminal_id"])
         return params

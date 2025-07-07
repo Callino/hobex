@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 import json
@@ -55,29 +54,22 @@ class PosPaymentMethod(models.Model):
     active_pos_session_ids = fields.Many2many('pos.session', string="Active POS Sessions", compute='_compute_active_pos_sessions')
 
     @api.model
-    def _load_pos_data_fields(self, config_id):
-        params = super()._load_pos_data_fields(config_id)
-        params += ['hobex_terminal_id']
-        return params
-
-    @api.model
-    def cron_renew_auth(self):
-        for journal in self.search([
+    def hobex_cron_renew_auth(self):
+        for method in self.search([
             ('use_payment_terminal', '=', 'hobex'),
             ('hobex_user', '!=', False),
             ('hobex_pass', '!=', False)
         ]):
             try:
-                journal.get_auth_token()
+                method.hobex_get_auth_token()
             except:
                 # Called from cron - so just ignore it here
-                _logger.error(_(u'hobex authentication failed. Please check credentials !'))
                 pass
 
-    def renew_auth_token(self):
-        self.get_auth_token()
+    def hobex_renew_auth_token(self):
+        self.hobex_get_auth_token()
 
-    def get_auth_token(self):
+    def hobex_get_auth_token(self):
         for method in self:
             params = {
                 'userName': method.hobex_user,
@@ -90,9 +82,9 @@ class PosPaymentMethod(models.Model):
                     raise UserError(res['message'])
                 method.hobex_auth_token = json.loads(result.content)['token']
             except Exception as e:
-                raise UserError(_(u'hobex Authentication failed. Please check credentials !'))
+                raise UserError(_(u'hobex authentication failed. Please check credentials !'))
 
-    def sample_transaction(self):
+    def hobex_sample_transaction(self):
         self.ensure_one()
         payload = {
             "transaction": {
@@ -111,8 +103,111 @@ class PosPaymentMethod(models.Model):
         except ReadTimeout as re:
             raise UserError(_(u'Timeout after 30 seconds.'))
         except Exception as e:
-            raise UserError(_('There was an error: %(error)s', error=str(e)))
-        _logger.info("Result Code: %s, Result: %s", result.status_code, result.content)
+            raise UserError(_(u'There was an error: %s') % (str(e), ))
+        _logger.debug("Result Code: %s, Result: %s", result.status_code, result.content)
+
+    def hobex_new_transaction(self, amount, currency, reference, transaction_id):
+        self.ensure_one()
+        if self.use_payment_terminal!='hobex':
+            raise UserError(_('This method is only available for Hobex payment methods.'))
+        # We do create the new transaction in a new environment with a new cursor with an explicit commit
+        with self.env.registry.cursor() as cr:
+            env = api.Environment(cr, self.env.user.id, self.env.context)
+            url = urljoin(self.hobex_api_address, "/api/transaction/payment")
+            env['pos.payment.hobex.transaction'].sudo().create({
+                'pos_payment_method_id': self.id,
+                'reference': reference,
+                'transaction_id': transaction_id,
+                'amount': amount,
+                'currency': currency,
+                'tid': self.hobex_terminal_id,
+                'url': url,
+            })
+            # Änderungen dauerhaft in der Datenbank speichern
+            env.cr.commit()
+            _logger.debug("CREATED NEW Hobex Transaction: %s", transaction_id)
+
+    def _get_hobex_headers(self):
+        self.ensure_one()
+        if self.use_payment_terminal!='hobex':
+            raise UserError(_('This method is only available for Hobex payment methods.'))
+        return {
+            'Token': self.hobex_auth_token,
+            'Content-Type': 'application/json'
+        }
+
+    def hobex_start_sync_transaction(self, transaction_id):
+        self.ensure_one()
+        if self.use_payment_terminal!='hobex':
+            raise UserError(_('This method is only available for Hobex payment methods.'))
+        # We do need a new cursor here - to be able to read the transaction we created before already with a new cursor
+        # The old cursor does not have this record!
+        with self.env.registry.cursor() as cr:
+            env = api.Environment(cr, self.env.user.id, self.env.context)
+            try:
+                transaction = env['pos.payment.hobex.transaction'].sudo().search([
+                    ('tid', '=', self.hobex_terminal_id),
+                    ('transaction_id', '=', transaction_id),
+                ], limit=1)
+                env.cr.commit()
+                # Do use Timeout of 60 seconds - otherwise the transaction will be aborted
+                # Because most Odoo Instances will run with 120 seconds timeout - if we also use 120 seconds timeout we will get a problem
+                _logger.debug("Start Hobex Sync Transaction: %s", transaction_id)
+                response = requests.post(
+                    transaction.url,
+                    data=json.dumps({
+                        'transaction': {
+                            'transactionType': transaction.transaction_type,
+                            'amount': transaction.amount,
+                            'currency': transaction.currency,
+                            'tid': transaction.tid,
+                            'reference': transaction.reference,
+                            'transactionId': transaction.transaction_id,
+                            'language': 'DE',
+                        }
+                    }),
+                    timeout=80,
+                    headers=self._get_hobex_headers(),
+                )
+                _logger.debug("Done Hobex Sync Transaction: %s", transaction_id)
+                # api.model call - will create own env for this
+                res = self.env['pos.payment.hobex.transaction']._update_transaction_with_hobex_result(
+                    tid=transaction.tid,
+                    transaction_id=transaction.transaction_id,
+                    response=response
+                )
+                return res, response
+            except Exception as e:
+                transaction.update({
+                    'state': 'failed',
+                    'message': str(e),
+                })
+                _logger.info('hobex Exception: %s', str(e))
+                return {
+                    'responseCode': '-1',
+                    'responseText': str(e),
+                }, response or None
+
+    def hobex_reversal_transaction(self, transactionId):
+        self.ensure_one()
+        if self.use_payment_terminal!='hobex':
+            raise UserError(_('This method is only available for Hobex payment methods.'))
+        url = urljoin(self.hobex_api_address, "/api/transaction/payment/%s/%s" % (self.hobex_terminal_id, transactionId, ))
+        try:
+            response = requests.delete(
+                url,
+                timeout=30,
+                headers=self._get_hobex_headers(),
+            )
+            # api.model call - will create own env for this
+            res = self.env['pos.payment.hobex.transaction']._update_transaction_with_hobex_result(
+                tid=self.hobex_terminal_id,
+                transaction_id=transactionId,
+                response=response
+            )
+            return res, response
+        except Exception as e:
+            _logger.info('hobex Exception: %s', str(e))
 
     def _check_required_if_hobex(self):
         """ If the field has 'required_if_terminal="hobex"' attribute, then it is required"""

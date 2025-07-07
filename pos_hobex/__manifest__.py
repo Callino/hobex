@@ -2,7 +2,7 @@
 {
     'name': 'hobex Payment Terminal',
     'summary': 'hobex Payment Terminal Integration for Odoo POS',
-    'version': '18.0.1.0.0',
+    'version': '18.0.2.0.0',
     'category': 'Point of Sale',
     'sequence': 6,
     'website': 'https://github.com/callino/hobex',
