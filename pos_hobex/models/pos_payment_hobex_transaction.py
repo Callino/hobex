@@ -50,7 +50,8 @@ class HobexTransaction(models.Model):
                 # 400 = Bad Request - Should not happen any time
                 raise UserError(response.text)
             elif response.status_code == 404 and transaction.state == 'pending':
-                # 404 = Transaction is not found on hobex side - but our state is pending - so it is pending
+                # 404 = Transaction is not found on hobex side - but our state is pending - so it is failed
+                transaction.state = 'failed'
                 return
             elif response.status_code == 404:
                 # 404 = Transaction is not found on hobex side
@@ -75,11 +76,17 @@ class HobexTransaction(models.Model):
                     )
                     res['cvm_receipt'] = receipt_result.text
                 if res['responseCode'] == "0":
+                    if res['state'] == 'OK':
+                        state = 'ok'
+                    elif res['state'] == 'VOID':
+                        state = 'refunded'
+                    elif res['state'] == 'INPROGRESS':
+                        state = 'pending'
                     transaction.update({
                         'response_code': res['responseCode'],
                         'response_text': res['responseText'],
                         'response': response.text,
-                        'state': 'ok',
+                        'state': state,
                     })
                 else:
                     transaction.update({
@@ -118,8 +125,11 @@ class HobexTransaction(models.Model):
                 transaction_id=self.transaction_id,
                 response=response
             )
-            if sync and res['state'] == 'INPROGRESS':
+            if sync and res and res['state'] == 'INPROGRESS':
                 time.sleep(5)
             else:
                 break
         return res, response
+
+    def reversal_hobex_transaction(self):
+        self.pos_payment_method_id.hobex_reversal_transaction(self.transaction_id)

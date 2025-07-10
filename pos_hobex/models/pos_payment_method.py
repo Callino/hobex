@@ -223,3 +223,49 @@ class PosPaymentMethod(models.Model):
     _constraints = [
         (_check_required_if_hobex, 'Required fields not filled', []),
     ]
+
+    def proxy_hobex_status_request(self, transaction_id):
+        transaction = self.env['pos.payment.hobex.transaction'].sudo().search([
+            ('tid', '=', self.hobex_terminal_id),
+            ('transaction_id', '=', transaction_id),
+        ], limit=1)
+        if not transaction:
+            return {
+                'error': True,
+                'message': 'Transaktion nicht gefunden',
+            }
+        res, response = transaction.update_hobex_state(sync=True)
+        if res:
+            return {
+                'error': False,
+                'res': res,
+            }
+        else:
+            return {
+                'error': True,
+                'message': 'Hobex Transaktion nicht gefunden',
+            }
+
+    def proxy_hobex_payment_request(self, data):
+        # Create String from transactionid
+        data['transactionId'] = str(data['transactionId'])
+        # Remove - from reference
+        data['reference'] = data['reference'].replace('-', '')
+        # We do create the new transaction in a new environment with a new cursor with an explicit commit
+        self.hobex_new_transaction(
+            amount=data['amount'],
+            currency=data['currency'],
+            reference=data['reference'],
+            transaction_id=data['transactionId'],
+        )
+        (res, response) = self.hobex_start_sync_transaction(data['transactionId'])
+        '''
+        This is for testing the Hobex cvm=1 Code - because i do not have any card here which will produce cvm=1 results 
+        res['cvm'] = 1
+        res['cvm_receipt'] = 'TEST123123'
+        '''
+        return res
+
+    def proxy_hobex_reversal_request(self, transaction_id):
+        res, response = self.hobex_reversal_transaction(transaction_id)
+        return res

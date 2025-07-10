@@ -54,6 +54,8 @@
                                     <field name="response_text"/>
                                     <field name="amount"/>
                                     <field name="currency"/>
+                                    <button name="update_hobex_state" type="object" string="Hobex Status" class="btn btn-primary fa fa-credit-card"/>
+                                    <button name="reversal_hobex_transaction" type="object" string="Hobex Rückbuchen" class="btn btn-primary fa fa-credit-card"/>
                                 </list>
                             </field>
                         </group>

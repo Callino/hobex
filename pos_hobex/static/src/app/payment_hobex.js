@@ -1,8 +1,7 @@
 /** @odoo-module */
 import { PaymentInterface } from "@point_of_sale/app/payment/payment_interface";
-import { register_payment_method } from "@point_of_sale/app/store/pos_store";
 import { _t } from "@web/core/l10n/translation";
-
+import { rpc } from "@web/core/network/rpc";
 
 export class PaymentHobex extends PaymentInterface{
 
@@ -61,6 +60,49 @@ export class PaymentHobex extends PaymentInterface{
         this.pos.hardwareProxy.printer.printReceipt(element);
     }
 
+    _hobex_handle_payment_request_done(line, resolve, response) {
+        // Do always set the response Code
+        line['hobex_responseCode'] = response.responseCode;
+        console.log('did set hobex response code ' + response.responseCode);
+        // And reset the payment status
+        if (response.responseCode === "0") {
+            line.set_payment_status('done');
+            this.update_payment_line_values_from_hobex(line, response);
+            resolve(true);
+        } else {
+            line.set_payment_status('retry');
+            if (response['responseCode'] === '8004') {
+                this.pos.env.bus.trigger('hobex_error', {
+                    'title': _t('hobex'),
+                    'body': _t('Die Transaktion wurde am Terminal abgebrochen'),
+                });
+            } else if (response['responseCode'] === '8003') {
+                this.pos.env.bus.trigger('hobex_error', {
+                    'title': _t('hobex Gerätefehler'),
+                    'body': _t('Das Terminal nicht scheint erreichbar zu sein. Bitte überprüfen Sie die Verbindung des Terminals mit dem Netzwerk und versuchen Sie es erneut.'),
+                });
+            } else {
+                this.pos.env.bus.trigger('hobex_error', {
+                    'title': _t('hobex Antwort'),
+                    'body': response['responseCode'] + ': ' + response['responseText'],
+                });
+            }
+            resolve(false);
+        }
+    }
+
+    _hobex_handle_payment_request_failure(line, resolve, response, textStatus, errorThrow) {
+        /**
+         * This will get called if a failure on network side or a direct odoo exception was thrown
+         */
+        line.set_payment_status('retry');
+        this.pos.env.bus.trigger('hobex_error', {
+            'title': _t('Achtung Fehler'),
+            'body': _t('Es ist ein Fehler bei der Kommunikation mit dem Odoo / hobex Server aufgetreten !'),
+        });
+        resolve(false);
+    }
+
     /**
      * Called when a user clicks the "Send" button in the
      * interface. This should initiate a payment request and return a
@@ -77,11 +119,11 @@ export class PaymentHobex extends PaymentInterface{
      * the payment should be retried. Rejected when the status of the
      * paymentline will be manually updated.
      */
-    async send_payment_request(cid) {
+    async send_payment_request(uuid) {
         await super.send_payment_request(...arguments);
         var order = this.pos.get_order();
         var self = this;
-        const line = order.paymentlines.find((line) => line.cid === cid);
+        const line = order.payment_ids.find((paymentLine) => paymentLine.uuid === uuid);
         if (line.amount < 0) {
             return new Promise((resolve) => {
                 self.pos.env.bus.trigger('hobex_error', {
@@ -93,86 +135,9 @@ export class PaymentHobex extends PaymentInterface{
             });
         }
         return new Promise((resolve) => {
-            function hobex_done(result) {
-                // Do always set the response Code
-                line['hobex_responseCode'] = result.responseCode;
-                console.log('did set hobex response code ' + result.responseCode);
-                // And reset the payment status
-                if (result.responseCode === "0") {
-                    line.set_payment_status('done');
-                    self.update_payment_line_values_from_hobex(line, result);
-                    resolve(true);
-                } else {
-                    line.set_payment_status('retry');
-                    if (result['responseCode'] === '8004') {
-                        self.pos.env.bus.trigger('hobex_error', {
-                            'title': _t('hobex'),
-                            'body': _t('Die Transaktion wurde am Terminal abgebrochen'),
-                        });
-                    } else {
-                        self.pos.env.bus.trigger('hobex_error', {
-                            'title': _t('hobex Antwort'),
-                            'body': result['responseCode'] + ': ' + result['responseText'],
-                        });
-                    }
-                    resolve(false);
-                }
-            }
-            function hobex_status_done(result) {
-                // Do always set the response Code
-                if (result.state === "INPROGRESS") {
-                    line.set_payment_status('waitingCard');
-                    resolve(false);
-                } else {
-                    line['hobex_responseCode'] = result.responseCode;
-                    console.log('did set hobex response code ' + result.responseCode);
-                    if (result.responseCode === "0") {
-                        self.update_payment_line_values_from_hobex(line, result);
-                        // Do set the payment status done
-                        line.set_payment_status('done');
-                        resolve(true);
-                    } else {
-                        // Payment was not successful - so set the status to retry
-                        line.set_payment_status('retry');
-                        // Allow to start a new transaction
-                        line.transaction_id = null;
-                        resolve(false);
-                    }
-                }
-            }
-            function hobex_failure(response, textStatus, errorThrow) {
-                // only "waiting", "waitingCard", "timeout" will make the payment line not removable
-                // retry will allow to remove it
-                // but in this state we can not allow to remove it - because payment could be successful
-                // waiting will produce a waiting screen without a cancel button
-                // waitingCard will produce a waiting screen with a cancel button - which will call send_payment_cancel
-                // but send_payment_cancel can not accept a successful payment
-                line.set_payment_status('waiting');
-                if (response.status === 0) {
-                    // This means that the server is not reachable - or browser got a reload
-                    self.pos.env.bus.trigger('hobex_error', {
-                        'title': _t('Fehler'),
-                        'body': _t('Odoo System ist nicht erreichbar.'),
-                    });
-                    // We do not resolv here - because we do not have a final answer to our request
-                } else if (response.responseJSON) {
-                    self.pos.env.bus.trigger('hobex_error', {
-                        'title': _t('hobex Antwort'),
-                        'body': _t(response.responseJSON.message),
-                    });
-                    resolve(false);
-                } else {
-                    self.pos.env.bus.trigger('hobex_error', {
-                        'title': _t(response.statusText),
-                        'body': _t(response.responseText),
-                    });
-                    resolve(false);
-                }
-            }
             // Check if we do have already a transaction_id here - if we do already have an answer from hobex side
             if ((line.transaction_id) && ("hobex_responseCode" in line) && (line.hobex_responseCode != "0")) {
                 // There is already a hobex result - but not successful - set lets try with a new transaction
-                console.log('do reset transaction id to null');
                 line.transaction_id = null;
             } else if ((line.transaction_id) && ("hobex_responseCode" in line) && (line.hobex_responseCode === "0")) {
                 // Transaction was already successful - so do resolve true
@@ -183,40 +148,25 @@ export class PaymentHobex extends PaymentInterface{
             if (line.transaction_id) {
                 // There is already a transaction_id - but no responseCode from Hobex
                 // So Update the transaction state from the server
-                line.set_payment_status('waiting');
-                $.ajax({
-                    url: "/hobex/api/v2/transactions/" + line.payment_method.id + "/" + line.transaction_id,
-                    type: 'get',
-                    timeout: 20000,
-                }).then(
-                    hobex_status_done,
-                    hobex_failure
-                );
+                this._hobex_update_payment_status(order, uuid);
             } else {
                 // No transaction_id - so start a new one
-                console.log("Starting new transaction");
                 line.set_payment_status('waitingCard');
                 line.transaction_id = Date.now();
-                order.save_to_db();
                 var data = {
                     'amount': Math.round(line.amount / this.pos.currency.rounding) * this.pos.currency.rounding,
                     'currency': this.pos.currency.name,
-                    'tid': line.payment_method.hobex_terminal_id,
-                    'reference': order.uid,
+                    'tid': line.payment_method_id.hobex_terminal_id,
+                    'reference': order.pos_reference,
                     'transactionId': line.transaction_id,
-                    'pos_payment_mode_id': line.payment_method.id,
                 };
-                $.ajax({
-                    url: "/hobex/api/transaction/payment",
-                    type: 'post',
-                    data: JSON.stringify({
-                        'transaction': data,
-                    }),
-                    contentType: "application/json",
-                    timeout: 120000,
-                }).then(
-                    hobex_done,
-                    hobex_failure
+                this.pos.data.silentCall("pos.payment.method", "proxy_hobex_payment_request", [
+                    [line.payment_method_id.id],
+                    data,
+                ]).then(
+                    this._hobex_handle_payment_request_done.bind(this, line, resolve),
+                ).catch(
+                    this._hobex_handle_payment_request_failure.bind(this, line, resolve),
                 );
             }
         });
@@ -244,45 +194,70 @@ export class PaymentHobex extends PaymentInterface{
         return Promise.resolve(false);
     }
 
-    async update_payment_status(order, cid){
+    _hobex_handle_status_connection_failure(line, data={}) {
+        this.pos.env.bus.trigger('hobex_error', {
+            'title': _t('hobex Fehler'),
+            'body': _t(data.message),
+        });
+        line.set_payment_status('waiting');
+        return Promise.reject(data);
+    }
+    _hobex_handle_status_update_response(line, resolve, response, textStatus, errorThrow) {
+        if (response['error']===true) {
+            line.set_payment_status('retry');
+            resolve(false);
+        } else {
+            let result = response['res'];
+            line['hobex_responseCode'] = result.responseCode;
+            console.log('did set hobex response code ' + result.responseCode);
+            if ((result.responseCode === "0") && (result.state === "OK")) {
+                this.update_payment_line_values_from_hobex(line, result);
+                line.set_payment_status('done');
+                resolve(true);
+            } else if ((result.responseCode === "0") && (result.state === "VOID")) {
+                this.update_payment_line_values_from_hobex(line, result);
+                line.set_amount(0);
+                line.set_payment_status('reversed');
+                resolve(true);
+            } else {
+                line.set_payment_status('retry');
+                resolve(false);
+            }
+        }
+    }
+    async _hobex_update_payment_status(order, uuid){
         var self = this;
-        const line = order.paymentlines.find((line) => line.cid === cid);
+        const line = order.payment_ids.find((paymentLine) => paymentLine.uuid === uuid);
         line.set_payment_status('waitingCard');
         return new Promise((resolve) => {
-            $.ajax({
-                url: "/hobex/api/v2/transactions/" + line.payment_method.id + "/" + line.transaction_id,
-                type: 'get',
-                timeout: 60000,
-            }).then(
-                function done(result) {
-                    line['hobex_responseCode'] = result.responseCode;
-                    console.log('did set hobex response code ' + result.responseCode);
-                    if ((result.responseCode === "0") && (result.state === "OK")) {
-                        self.update_payment_line_values_from_hobex(line, result);
-                        line.set_payment_status('done');
-                        resolve(true);
-                    } else if ((result.responseCode === "0") && (result.state === "VOID")) {
-                        self.update_payment_line_values_from_hobex(line, result);
-                        line.set_amount(0);
-                        line.set_payment_status('reversed');
-                        resolve(true);
-                    } else {
-                        line.set_payment_status('retry');
-                        resolve(false);
-                    }
-                },
-                function failure(response) {
-                    self.pos.env.bus.trigger('hobex_error', {
-                        'title': _t('hobex Fehler'),
-                        'body': _t(response.responseJSON.message),
-                    });
-                    line.set_payment_status('waiting');
-                    resolve(false);
-                }
+            this.pos.data.silentCall("pos.payment.method", "proxy_hobex_status_request", [
+                [this.payment_method_id.id],
+                line.transaction_id,
+            ]).then(
+                this._hobex_handle_status_update_response.bind(this, line, resolve)
+            ).catch(
+                this._hobex_handle_status_connection_failure.bind(this, line)
             );
         });
     }
 
+    _hobex_handle_reversal_response(line, resolve, response) {
+        // Do always set the response Code
+        line['hobex_responseCode'] = response.responseCode;
+        console.log('did set hobex response code ' + response.responseCode);
+        // And reset the payment status
+        if (response.responseCode === "0") {
+            line.set_payment_status('reversed');
+            this.update_payment_line_values_from_hobex(line, response);
+            resolve(true);
+        } else {
+            this.pos.env.bus.trigger('hobex_error', {
+                'title': _t('hobex Antwort'),
+                'body': _t(response.responseCode + ": " + response.responseText),
+            });
+            resolve(false);
+        }
+    }
     /**
      * This is an optional method. When implementing this make sure to
      * call enable_reversals() in the constructor of your
@@ -293,38 +268,22 @@ export class PaymentHobex extends PaymentInterface{
      * @param {string} cid - The id of the paymentline
      * @returns {Promise} returns true if the reversal was successful.
      */
-    async send_payment_reversal(cid) {
+    async send_payment_reversal(uuid) {
         await super.send_payment_reversal(...arguments);
         var order = this.pos.get_order();
         var self = this;
-        const line = order.paymentlines.find((line) => line.cid === cid);
+        const line = order.payment_ids.find((paymentLine) => paymentLine.uuid === uuid);
         line.set_payment_status('reversing');
         return new Promise((resolve) => {
-            $.ajax({
-                url: "/hobex/api/transaction/payment/" + line.payment_method.id + "/" + line.transaction_id,
-                type: 'delete',
-                timeout: 120000,
-            }).then(
-                function done(result) {
-                    resolve(true);
-                },
-                function failure(response) {
-                    self.pos.env.bus.trigger('hobex_error', {
-                        'title': _t('hobex Fehler'),
-                        'body': _t(response.responseJSON.message),
-                    });
-                    resolve(false);
-                }
+            this.pos.data.silentCall("pos.payment.method", "proxy_hobex_reversal_request", [
+                [this.payment_method_id.id],
+                line.transaction_id,
+            ]).then(
+                this._hobex_handle_reversal_response.bind(this, line, resolve)
+            ).catch(
+                this._hobex_handle_status_connection_failure.bind(this, line)
             );
         });
     }
 
-    /**
-     * Called when the payment screen in the POS is closed (by
-     * e.g. clicking the "Back" button). Could be used to cancel in
-     * progress payments.
-     */
-    close() {
-        console.log("Close got called");
-    }
 };
