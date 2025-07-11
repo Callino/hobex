@@ -2,7 +2,7 @@ from odoo import api, fields, models
 import requests
 from urllib.parse import urljoin
 import json
-from odoo.odoo.exceptions import UserError
+from odoo.exceptions import UserError
 import time
 
 
