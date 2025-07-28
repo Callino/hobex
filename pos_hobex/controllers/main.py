@@ -1,119 +1,63 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 from odoo.http import Controller, request, route, SessionExpiredException, Response
-from odoo import _
-import requests
-from urllib.parse import urljoin
+from odoo import _, api, fields
 import json
-import logging
-
-_logger = logging.getLogger(__name__)
 
 
 class HobexController(Controller):
-    @route('/hobex/api/transaction/payment', type="http", auth="public", cors='*', csrf=False, methods=['POST'])
-    def payment(self):
-        data = json.loads(request.httprequest.data.decode('utf-8'))
-        payment_method = request.env['pos.payment.method'].sudo().browse(data['transaction']['pos_payment_mode_id'])
-        if not payment_method:
-            return Response(_('Payment Method is not available'), status=404)
-        del data['transaction']['pos_payment_mode_id']
-        h = {
-            'Token': payment_method.hobex_auth_token,
-            'Content-Type': 'application/json'
-        }
-        url = urljoin(payment_method.hobex_api_address, "/api/transaction/payment")
-        # Search for existing transaction
-        transaction = request.env['pos.payment.hobex.transaction'].sudo().search([
-            ('tid', '=', data['transaction']['tid']),
-            ('reference', '=', data['transaction']['reference']),
-        ], limit=1)
-        # do return the response we already got - but exclude aborted transactions - user may try again
-        if transaction and transaction.response_code is not False and transaction.response_code not in ['8004']:
-            headers = {
-                'Content-Type': 'application/json',
-            }
-            return Response(transaction.response, status=200, headers=headers)
-        if transaction:
-            # if we do have a transaction here - then it is an aborted transaction - so delete it to avoid unique references
-            transaction.unlink()
-        transaction = request.env['pos.payment.hobex.transaction'].sudo().create({
-            'pos_payment_method_id': payment_method.id,
-            'reference': data['transaction']['reference'],
-            'transaction_type': data['transaction']['transactionType'],
-            'amount': data['transaction']['amount'],
-            'currency': data['transaction']['currency'],
-            'tid': data['transaction']['tid'],
-            'url': url,
-        })
-        try:
-            result = requests.post(
-                url,
-                data=json.dumps(data),
-                timeout=120,
-                headers=h,
-            )
-            res = json.loads(result.text)
-            if res['responseCode'] == "0" and res['cvm'] == 1:
-                # We do fetch the receipt from hobex - and include it in the response
-                receipt_url = urljoin(payment_method.hobex_api_address, "/api/transaction/download")
-                receipt_result = requests.get(
-                    receipt_url,
-                    params={
-                        'tid': data['transaction']['tid'],
-                        'transactionId': res['transactionId'],
-                        'width': 32,
-                        'type': 'txt',
-                        'raw': True,
-                    },
-                    timeout=10,
-                    headers=h,
-                )
-                res['cvm_receipt'] = receipt_result.text
-            if res['responseCode'] == "0":
-                transaction.update({
-                    'response_code': res['responseCode'],
-                    'response_text': res['responseText'],
-                    'response': result.text,
-                    'state': 'ok',
-                })
-            else:
-                transaction.update({
-                    'response_code': res['responseCode'],
-                    'response_text': res['responseText'],
-                    'response': result.text,
-                    'state': 'failed',
-                })
-            return Response(json.dumps(res), status=result.status_code, headers=dict(result.headers))
-        except Exception as e:
-            transaction.update({
-                'state': 'failed',
-                'message': str(e),
-            })
-            _logger.info('hobex Exception: %s', str(e))
-            headers = {
-                'Content-Type': 'application/json',
-            }
-            return Response(json.dumps({
-                'responseCode': '-1',
-                'responseText': 'Timeout on transaction request',
-            }), status=200, headers=headers)
 
-
-    @route('/hobex/api/transaction/payment/<int:method_id>/<string:transactionId>', type="http", auth="public", cors='*', csrf=False, methods=['DELETE'])
-    def payment_reversal(self, method_id, transactionId):
+    def _get_payment_method(self, method_id):
         payment_method = request.env['pos.payment.method'].sudo().browse(method_id)
         if not payment_method:
             return Response(_('Payment Method is not available'), status=404)
-        h = {
-            'Token': payment_method.hobex_auth_token,
-        }
-        url = urljoin(payment_method.hobex_api_address, "/api/transaction/payment/%s/%s" % (payment_method.hobex_terminal_id, transactionId, ))
-        try:
-            result = requests.delete(
-                url,
-                timeout=30,
-                headers=h,
-            )
-            return Response(result.text, status=result.status_code, headers=dict(result.headers))
-        except Exception as e:
-            _logger.info('hobex Exception: %s', str(e))
+        return payment_method
+
+    @route('/hobex/api/transaction/payment', type="http", auth="public", cors='*', csrf=False, methods=['POST'])
+    def payment(self):
+        data = json.loads(request.httprequest.data.decode('utf-8'))
+        # Get and check Payment method
+        payment_method = self._get_payment_method(data['transaction']['pos_payment_mode_id'])
+        del data['transaction']['pos_payment_mode_id']
+        # Create String from transactionid
+        data['transaction']['transactionId'] = str(data['transaction']['transactionId'])
+        # Remove - from reference
+        data['transaction']['reference'] = data['transaction']['reference'].replace('-', '')
+        # We do create the new transaction in a new environment with a new cursor with an explicit commit
+        payment_method.hobex_new_transaction(
+            amount=data['transaction']['amount'],
+            currency=data['transaction']['currency'],
+            reference=data['transaction']['reference'],
+            transaction_id=data['transaction']['transactionId'],
+        )
+        (res, response) = payment_method.hobex_start_sync_transaction(data['transaction']['transactionId'])
+        '''
+        This is for testing the Hobex cvm=1 Code - because i do not have any card here which will produce cvm=1 results 
+        res['cvm'] = 1
+        res['cvm_receipt'] = 'TEST123123'
+        '''
+        return Response(json.dumps(res), status=response.status_code, headers=dict(response.headers))
+
+    @route('/hobex/api/transaction/payment/<int:method_id>/<string:transactionId>', type="http", auth="public", cors='*', csrf=False, methods=['DELETE'])
+    def payment_reversal(self, method_id, transactionId):
+        payment_method = self._get_payment_method(method_id)
+        res, response = payment_method.hobex_reversal_transaction(transactionId)
+        if res:
+            return Response(json.dumps(res), status=response.status_code, headers=dict(response.headers))
+        else:
+            return Response(_('Transaction not found on hobex side'), status=404)
+
+    @route('/hobex/api/v2/transactions/<int:method_id>/<string:transactionId>', type="http", auth="public", cors='*', csrf=False, methods=['GET'])
+    def payment_state(self, method_id, transactionId):
+        payment_method = self._get_payment_method(method_id)
+        transaction = request.env['pos.payment.hobex.transaction'].sudo().search([
+            ('tid', '=', payment_method.hobex_terminal_id),
+            ('transaction_id', '=', transactionId),
+        ], limit=1)
+        if not transaction:
+            return Response(_('Transaction not found !'), status=404)
+
+        res, response = transaction.update_hobex_state(sync=True)
+        if res:
+            return Response(json.dumps(res), status=response.status_code, headers=dict(response.headers))
+        else:
+            return Response(_('Transaction not found on hobex side'), status=404)
