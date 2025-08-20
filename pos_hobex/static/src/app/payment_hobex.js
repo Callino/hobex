@@ -1,10 +1,9 @@
-/** @odoo-module */
-import { PaymentInterface } from "@point_of_sale/app/payment/payment_interface";
+/* hobex payment api */
 import { _t } from "@web/core/l10n/translation";
-import { rpc } from "@web/core/network/rpc";
+import { PaymentInterface } from "@point_of_sale/app/payment/payment_interface";
+import { register_payment_method } from "@point_of_sale/app/store/pos_store";
 
-export class PaymentHobex extends PaymentInterface{
-
+export class PaymentHobex extends PaymentInterface {
     //--------------------------------------------------------------------------
     // Public
     //--------------------------------------------------------------------------
@@ -41,7 +40,7 @@ export class PaymentHobex extends PaymentInterface{
         line.hobex_transactionType = result.transactionType;
         line.hobex_responseCode = result.responseCode;
         line.hobex_responseText = result.responseText;
-        line.hobex_cvm = result.cvm;        
+        line.hobex_cvm = result.cvm;
         if (result.cvm === 1 && this.pos.hardwareProxy.printer && result.cvm_receipt) {
             this.print_hobex_receipt(result.cvm_receipt);
         }
@@ -119,6 +118,9 @@ export class PaymentHobex extends PaymentInterface{
      * the payment should be retried. Rejected when the status of the
      * paymentline will be manually updated.
      */
+    /**
+     * @override
+     */
     async send_payment_request(uuid) {
         await super.send_payment_request(...arguments);
         var order = this.pos.get_order();
@@ -183,6 +185,10 @@ export class PaymentHobex extends PaymentInterface{
      * @param {} order - The order of the paymentline
      * @param {string} cid - The id of the paymentline
      * @returns {Promise}
+     */
+
+    /**
+     * @override
      */
     send_payment_cancel(order, cid) {
         // Hobex does not support to cancel running payment requests
@@ -268,8 +274,11 @@ export class PaymentHobex extends PaymentInterface{
      * @param {string} cid - The id of the paymentline
      * @returns {Promise} returns true if the reversal was successful.
      */
-    async send_payment_reversal(uuid) {
-        await super.send_payment_reversal(...arguments);
+    /**
+     * @override
+     */
+    send_payment_reversal(uuid) {
+        super.send_payment_reversal(...arguments);
         var order = this.pos.get_order();
         var self = this;
         const line = order.payment_ids.find((paymentLine) => paymentLine.uuid === uuid);
@@ -285,5 +294,6 @@ export class PaymentHobex extends PaymentInterface{
             );
         });
     }
+}
 
-};
+register_payment_method("hobex", PaymentHobex);

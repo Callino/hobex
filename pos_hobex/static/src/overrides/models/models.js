@@ -1,10 +1,6 @@
 /** @odoo-module */
 import { PosPayment } from "@point_of_sale/app/models/pos_payment";
-import { register_payment_method } from "@point_of_sale/app/store/pos_store";
-import { PaymentHobex } from '@pos_hobex/app/payment_hobex';
 import { patch } from "@web/core/utils/patch";
-
-register_payment_method('hobex', PaymentHobex);
 
 patch(PosPayment.prototype, {
     setup() {
@@ -27,6 +23,7 @@ patch(PosPayment.prototype, {
         this.hobex_responseText = this.hobex_responseText || false;
         this.hobex_cvm = this.hobex_cvm || false;
     },
+
     //@override
     export_as_JSON() {
         var json = super.export_as_JSON(...arguments);

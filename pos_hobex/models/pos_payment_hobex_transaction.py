@@ -2,7 +2,7 @@ from odoo import api, fields, models
 import requests
 from urllib.parse import urljoin
 import json
-from odoo.odoo.exceptions import UserError
+from odoo.exceptions import UserError
 import time
 
 
@@ -76,11 +76,11 @@ class HobexTransaction(models.Model):
                     )
                     res['cvm_receipt'] = receipt_result.text
                 if res['responseCode'] == "0":
-                    if res['state'] == 'OK':
+                    if res['responseText'] == 'OK':
                         state = 'ok'
-                    elif res['state'] == 'VOID':
+                    elif res['responseText'] == 'VOID':
                         state = 'refunded'
-                    elif res['state'] == 'INPROGRESS':
+                    elif res['responseText'] == 'INPROGRESS':
                         state = 'pending'
                     transaction.update({
                         'response_code': res['responseCode'],
