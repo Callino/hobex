@@ -1,0 +1,356 @@
+<!--
+  Odoo Apps store description for pos_hobex.
+  Self-contained: inline CSS only, no external assets beyond the
+  banner / images shipped under static/description/ and static/src/img/.
+-->
+<section style="font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+                color: #1d2433; background: #ffffff; line-height: 1.55;">
+
+  <!-- ============================================================ HERO
+       Note: apps.odoo.com strips background-image / linear-gradient on
+       free-form description blocks, so colours have to read on a plain
+       white surface. We use the hobex red as the accent colour rather
+       than as a background, and a thin red top border to give the
+       section identity. -->
+  <div style="border-top: 6px solid #e30613;
+              padding: 48px 32px 40px; text-align: center;
+              background: #ffffff;">
+    <h1 style="font-size: 44px; margin: 0 0 12px; font-weight: 800;
+               letter-spacing: -0.5px; color: #1d2433;">
+      hobex Payment Terminal
+    </h1>
+    <p style="font-size: 20px; margin: 0 auto; max-width: 720px; color: #4a5466;">
+      Akzeptiere Karten- und kontaktlose Zahlungen direkt an der Odoo-Kasse
+      &mdash; voll integriert mit dem hobex REST-API.
+    </p>
+    <div style="margin-top: 28px;">
+      <span style="display: inline-block; background: #fff0f1;
+                   border: 1px solid #e30613; color: #b30410;
+                   padding: 6px 14px; border-radius: 999px; font-size: 14px;
+                   font-weight: 600; margin: 4px 4px;">Odoo&nbsp;19</span>
+      <span style="display: inline-block; background: #fff0f1;
+                   border: 1px solid #e30613; color: #b30410;
+                   padding: 6px 14px; border-radius: 999px; font-size: 14px;
+                   font-weight: 600; margin: 4px 4px;">Point&nbsp;of&nbsp;Sale</span>
+      <span style="display: inline-block; background: #fff0f1;
+                   border: 1px solid #e30613; color: #b30410;
+                   padding: 6px 14px; border-radius: 999px; font-size: 14px;
+                   font-weight: 600; margin: 4px 4px;">REST&nbsp;API</span>
+      <span style="display: inline-block; background: #fff0f1;
+                   border: 1px solid #e30613; color: #b30410;
+                   padding: 6px 14px; border-radius: 999px; font-size: 14px;
+                   font-weight: 600; margin: 4px 4px;">AGPL-3</span>
+    </div>
+  </div>
+
+  <!-- ============================================================ INTRO -->
+  <div style="max-width: 980px; margin: 0 auto; padding: 48px 32px 8px;">
+    <h2 style="font-size: 28px; margin: 0 0 16px; color: #1d2433;">Was dieses Modul macht</h2>
+    <p style="font-size: 17px; color: #4a5466; margin: 0 0 16px;">
+      Dieses Modul integriert <strong style="color:#e30613;">hobex</strong>
+      Zahlungsterminals direkt in den Odoo Point of Sale.
+      Der Kassier startet die Zahlung mit einem Klick, der Betrag wird
+      &uuml;ber das offizielle hobex REST-API an das Terminal gesendet,
+      und das Ergebnis &mdash; inkl. Autorisierungscode, Karten-Brand,
+      maskierter PAN und optionalem Unterschriftsbeleg &mdash; flie&szlig;t
+      automatisch in den zugeh&ouml;rigen <em>pos.payment</em>-Datensatz
+      zur&uuml;ck. Keine manuellen Schritte, keine doppelten Buchungen.
+    </p>
+    <p style="font-size: 17px; color: #4a5466; margin: 0;">
+      Unterst&uuml;tzt werden alle hobex Terminals, die das REST-API
+      anbieten &mdash; mit getrennten Endpunkten f&uuml;r Produktiv- und
+      Test-Sandbox.
+    </p>
+  </div>
+
+  <!-- ============================================================ FEATURES -->
+  <div style="max-width: 980px; margin: 0 auto; padding: 32px;">
+    <h2 style="font-size: 28px; margin: 0 0 24px;">Funktionen im &Uuml;berblick</h2>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 20px;">
+
+      <!-- Cards use FontAwesome 4 icons (always loaded in the Odoo backend)
+           instead of Unicode emoji, because apps.odoo.com serves
+           index.html without a UTF-8 declaration and Unicode multi-byte
+           sequences come out as mojibake. -->
+
+      <!-- card -->
+      <div style="background: #f7f8fb; border: 1px solid #e6e8ef;
+                  border-radius: 10px; padding: 22px;">
+        <div style="font-size: 22px; color: #e30613; margin-bottom: 8px;
+                    font-weight: 700;">
+          <i class="fa fa-bolt" aria-hidden="true" style="margin-right: 10px;"></i>
+          <span>Native POS-Integration</span>
+        </div>
+        <p style="margin: 0; color: #4a5466;">
+          hobex erscheint als Karte in der Provider-&Uuml;bersicht neben
+          Adyen, Stripe und SIX. Ein Klick auf <em>Aktivieren</em> /
+          <em>Setup</em> setzt automatisch <code>Integration = Terminal</code>
+          und <code>Zahlungsterminal = Hobex</code>.
+        </p>
+      </div>
+
+      <div style="background: #f7f8fb; border: 1px solid #e6e8ef;
+                  border-radius: 10px; padding: 22px;">
+        <div style="font-size: 22px; color: #e30613; margin-bottom: 8px;
+                    font-weight: 700;">
+          <i class="fa fa-refresh" aria-hidden="true" style="margin-right: 10px;"></i>
+          <span>Robuste Transaktionen</span>
+        </div>
+        <p style="margin: 0; color: #4a5466;">
+          Synchroner Aufruf mit Status-Polling: l&auml;uft die Verbindung in
+          den Timeout, kann der Kassier zur Bestellung zur&uuml;ckkehren und
+          den Status nachholen. Keine Doppelbelastungen.
+        </p>
+      </div>
+
+      <div style="background: #f7f8fb; border: 1px solid #e6e8ef;
+                  border-radius: 10px; padding: 22px;">
+        <div style="font-size: 22px; color: #e30613; margin-bottom: 8px;
+                    font-weight: 700;">
+          <i class="fa fa-undo" aria-hidden="true" style="margin-right: 10px;"></i>
+          <span>Storno &amp; Refund</span>
+        </div>
+        <p style="margin: 0; color: #4a5466;">
+          Reversal direkt aus Odoo. Ein <em>Storno</em> setzt sowohl die
+          POS-Zahlung als auch den verkn&uuml;pften hobex-Transaktions&shy;datensatz
+          auf <code>refunded</code> &mdash; der Audit-Trail bleibt konsistent.
+        </p>
+      </div>
+
+      <div style="background: #f7f8fb; border: 1px solid #e6e8ef;
+                  border-radius: 10px; padding: 22px;">
+        <div style="font-size: 22px; color: #e30613; margin-bottom: 8px;
+                    font-weight: 700;">
+          <i class="fa fa-pencil" aria-hidden="true" style="margin-right: 10px;"></i>
+          <span>Unterschriftsbelege</span>
+        </div>
+        <p style="margin: 0; color: #4a5466;">
+          Bei Belegen mit CVM = Unterschrift wird der H&auml;ndlerbeleg
+          automatisch von hobex abgerufen und &mdash; falls ein
+          IoT-Drucker angebunden ist &mdash; direkt gedruckt.
+        </p>
+      </div>
+
+      <div style="background: #f7f8fb; border: 1px solid #e6e8ef;
+                  border-radius: 10px; padding: 22px;">
+        <div style="font-size: 22px; color: #e30613; margin-bottom: 8px;
+                    font-weight: 700;">
+          <i class="fa fa-lock" aria-hidden="true" style="margin-right: 10px;"></i>
+          <span>Sichere Credentials</span>
+        </div>
+        <p style="margin: 0; color: #4a5466;">
+          <code>hobex_user</code>, <code>hobex_pass</code> und
+          <code>hobex_auth_token</code> sind auf
+          <code>base.group_erp_manager</code> beschr&auml;nkt.
+          Kassen-Benutzer k&ouml;nnen sie weder &uuml;ber RPC, Export noch
+          das Formular auslesen.
+        </p>
+      </div>
+
+      <div style="background: #f7f8fb; border: 1px solid #e6e8ef;
+                  border-radius: 10px; padding: 22px;">
+        <div style="font-size: 22px; color: #e30613; margin-bottom: 8px;
+                    font-weight: 700;">
+          <i class="fa fa-info-circle" aria-hidden="true" style="margin-right: 10px;"></i>
+          <span>Aussagekr&auml;ftige Fehler</span>
+        </div>
+        <p style="margin: 0; color: #4a5466;">
+          Timeout, Verbindungsfehler, ung&uuml;ltige Credentials und
+          unerwartete HTTP-Antworten produzieren jeweils eine eigene,
+          beschreibende Meldung &mdash; statt eines generischen
+          &bdquo;Credentials pr&uuml;fen&ldquo;.
+        </p>
+      </div>
+
+      <div style="background: #f7f8fb; border: 1px solid #e6e8ef;
+                  border-radius: 10px; padding: 22px;">
+        <div style="font-size: 22px; color: #e30613; margin-bottom: 8px;
+                    font-weight: 700;">
+          <i class="fa fa-clock-o" aria-hidden="true" style="margin-right: 10px;"></i>
+          <span>Auto-Token-Renewal</span>
+        </div>
+        <p style="margin: 0; color: #4a5466;">
+          Ein eingebauter Cron-Job aktualisiert den hobex-Token einmal
+          t&auml;glich, sodass Sessions nicht mitten in der Schicht
+          unbemerkt ablaufen.
+        </p>
+      </div>
+
+      <div style="background: #f7f8fb; border: 1px solid #e6e8ef;
+                  border-radius: 10px; padding: 22px;">
+        <div style="font-size: 22px; color: #e30613; margin-bottom: 8px;
+                    font-weight: 700;">
+          <i class="fa fa-language" aria-hidden="true" style="margin-right: 10px;"></i>
+          <span>Deutsche Lokalisierung</span>
+        </div>
+        <p style="margin: 0; color: #4a5466;">
+          Alle UI-Texte und Dialoge sind &uuml;bersetzt
+          (<code>i18n/de.po</code>). Belegausdruck auf Deutsch.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ SETUP -->
+  <div style="background: #f7f8fb; padding: 48px 32px;">
+    <div style="max-width: 980px; margin: 0 auto;">
+      <h2 style="font-size: 28px; margin: 0 0 24px;">Einrichtung in 4 Schritten</h2>
+
+      <!--
+        Steps are laid out as <table> rows because apps.odoo.com strips
+        flex / gap properties, leaving the number badges sitting on top of
+        the text. Tables guarantee horizontal layout, and the number is a
+        red-outlined circle (border + color) instead of red-on-red so it
+        survives a stripped background.
+      -->
+      <table style="width: 100%; border-collapse: separate; border-spacing: 0 16px;">
+        <tr>
+          <td style="background: #ffffff; border: 1px solid #e6e8ef;
+                     border-radius: 10px; padding: 20px; width: 76px;
+                     vertical-align: top;">
+            <div style="width: 44px; height: 44px;
+                        border: 3px solid #e30613; border-radius: 50%;
+                        color: #e30613; font-weight: 800; font-size: 20px;
+                        line-height: 38px; text-align: center;">1</div>
+          </td>
+          <td style="background: #ffffff; border: 1px solid #e6e8ef;
+                     border-left: 0; border-radius: 10px; padding: 20px;
+                     vertical-align: top;">
+            <h3 style="margin: 0 0 6px; font-size: 18px;">Modul installieren</h3>
+            <p style="margin: 0; color: #4a5466;">
+              &Uuml;ber <em>Apps &rarr; pos_hobex</em>
+              oder direkt aus der Provider-&Uuml;bersicht auf der
+              Zahlungs&shy;methode (Klick auf die Hobex-Karte).
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background: #ffffff; border: 1px solid #e6e8ef;
+                     border-radius: 10px; padding: 20px; width: 76px;
+                     vertical-align: top;">
+            <div style="width: 44px; height: 44px;
+                        border: 3px solid #e30613; border-radius: 50%;
+                        color: #e30613; font-weight: 800; font-size: 20px;
+                        line-height: 38px; text-align: center;">2</div>
+          </td>
+          <td style="background: #ffffff; border: 1px solid #e6e8ef;
+                     border-left: 0; border-radius: 10px; padding: 20px;
+                     vertical-align: top;">
+            <h3 style="margin: 0 0 6px; font-size: 18px;">Zahlungsmethode anlegen</h3>
+            <p style="margin: 0; color: #4a5466;">
+              <em>Point of Sale &rarr; Konfiguration &rarr; Zahlungs&shy;methoden &rarr; Neu</em>.
+              Bank-Journal w&auml;hlen, <em>Integration = Terminal</em>,
+              <em>Zahlungsterminal = Hobex</em>.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background: #ffffff; border: 1px solid #e6e8ef;
+                     border-radius: 10px; padding: 20px; width: 76px;
+                     vertical-align: top;">
+            <div style="width: 44px; height: 44px;
+                        border: 3px solid #e30613; border-radius: 50%;
+                        color: #e30613; font-weight: 800; font-size: 20px;
+                        line-height: 38px; text-align: center;">3</div>
+          </td>
+          <td style="background: #ffffff; border: 1px solid #e6e8ef;
+                     border-left: 0; border-radius: 10px; padding: 20px;
+                     vertical-align: top;">
+            <h3 style="margin: 0 0 6px; font-size: 18px;">Credentials eintragen</h3>
+            <p style="margin: 0; color: #4a5466;">
+              <strong>Terminal&shy;ID</strong>, hobex
+              <strong>Benutzer</strong> und <strong>Passwort</strong> aus
+              dem hobex Dashboard &uuml;bernehmen, dazu
+              <em>Test&shy;modus</em> oder <em>Echt&shy;betrieb</em> w&auml;hlen.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background: #ffffff; border: 1px solid #e6e8ef;
+                     border-radius: 10px; padding: 20px; width: 76px;
+                     vertical-align: top;">
+            <div style="width: 44px; height: 44px;
+                        border: 3px solid #e30613; border-radius: 50%;
+                        color: #e30613; font-weight: 800; font-size: 20px;
+                        line-height: 38px; text-align: center;">4</div>
+          </td>
+          <td style="background: #ffffff; border: 1px solid #e6e8ef;
+                     border-left: 0; border-radius: 10px; padding: 20px;
+                     vertical-align: top;">
+            <h3 style="margin: 0 0 6px; font-size: 18px;">Verbindung testen</h3>
+            <p style="margin: 0; color: #4a5466;">
+              Auf <em>Check Connection</em> klicken &mdash; bei Erfolg
+              erscheint der <em>Sample Transaction</em>-Button, mit dem
+              eine 0,01&nbsp;&euro;-Probebuchung gegen das Terminal
+              gefahren werden kann.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============================================================ ENDPOINTS -->
+  <div style="max-width: 980px; margin: 0 auto; padding: 48px 32px 16px;">
+    <h2 style="font-size: 28px; margin: 0 0 16px;">Endpunkte</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 16px;">
+      <div style="border: 1px solid #e6e8ef; border-radius: 10px; padding: 20px;">
+        <h3 style="margin: 0 0 8px; font-size: 16px;
+                   color: #1d2433; text-transform: uppercase;
+                   letter-spacing: 0.5px;">Test-Sandbox</h3>
+        <a href="https://hobexplus.brunn.hobex.at/login"
+           style="color: #e30613; text-decoration: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 14px;">
+          hobexplus.brunn.hobex.at
+        </a>
+      </div>
+      <div style="border: 1px solid #e6e8ef; border-radius: 10px; padding: 20px;">
+        <h3 style="margin: 0 0 8px; font-size: 16px;
+                   color: #1d2433; text-transform: uppercase;
+                   letter-spacing: 0.5px;">Produktiv</h3>
+        <a href="https://online.hobex.at/login"
+           style="color: #e30613; text-decoration: none; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 14px;">
+          online.hobex.at
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ FOOTER
+       Light-on-light text would disappear if apps.odoo.com strips the
+       dark background. Keep the colours readable on white as well. -->
+  <div style="border-top: 1px solid #e6e8ef; padding: 40px 32px;
+              background: #f7f8fb;">
+    <div style="max-width: 980px; margin: 0 auto;
+                display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 32px;">
+      <div>
+        <h3 style="margin: 0 0 8px; color: #1d2433; font-size: 16px;">Author</h3>
+        <p style="margin: 0; color: #4a5466;">
+          Wolfgang Pichler &amp; Gerhard Baumgartner<br/>
+          <a href="https://www.callino.at" style="color: #e30613;">Callino Software Entwicklung</a>
+        </p>
+      </div>
+      <div>
+        <h3 style="margin: 0 0 8px; color: #1d2433; font-size: 16px;">Sponsor</h3>
+        <p style="margin: 0; color: #4a5466;">
+          Im Auftrag der
+          <a href="https://www.hobex.at" style="color: #e30613;">hobex AG</a>
+          entwickelt.
+        </p>
+      </div>
+      <div>
+        <h3 style="margin: 0 0 8px; color: #1d2433; font-size: 16px;">Quellcode</h3>
+        <p style="margin: 0; color: #4a5466;">
+          <a href="https://github.com/Callino/hobex/tree/19.0/pos_hobex"
+             style="color: #e30613;">github.com/Callino/hobex</a><br/>
+          Lizenz: AGPL-3.0
+        </p>
+      </div>
+    </div>
+  </div>
+
+</section>
