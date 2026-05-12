@@ -2,49 +2,104 @@
 <odoo>
     <data>
 
-        <!-- Add Open Cashdrawer, and Payment Fields to account.journal Form - it is in the POS Tab -->
         <record id="pos_payment_method_view_form_hobex" model="ir.ui.view">
             <field name="name">hobex Payment Method Erweiterung</field>
             <field name="model">pos.payment.method</field>
             <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_form"/>
             <field name="arch" type="xml">
 
-                <xpath expr="//field[@name='use_payment_terminal']/../.." position="after">
+                <!--
+                Anchor on the outer 'Payment methods' group so our content
+                sits BELOW it as a full-width block, instead of being
+                shoehorned into the right-hand column next to
+                use_payment_terminal.
+                -->
+                <xpath expr="//group[@name='Payment methods']" position="after">
                     <group name="hobex" invisible="use_payment_terminal != 'hobex'">
-                        <div>
-                            <div class="row mb-3">
-                                <div class="col-12">
-                                    <img src="/pos_hobex/static/src/img/hobex_logo_3.png" alt="hobex Logo"/>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-4">
-                                    <button name="hobex_get_auth_token" type="object" string="Check Connection" class="btn btn-primary fa fa-handshake-o" invisible="hobex_auth_token != False"/>
-                                </div>
-                                <div class="col-4">
-                                    <button name="hobex_renew_auth_token" type="object" string="Renew Auth" class="btn btn-primary fa fa-handshake-o" invisible="hobex_auth_token != False"/>
-                                </div>
-                                <div class="col-4">
-                                    <button name="hobex_sample_transaction" type="object" string="Sample Transaction" class="btn btn-primary fa fa-credit-card" invisible="hobex_auth_token == False"/>
-                                </div>
+
+                        <!-- Hidden helpers -->
+                        <field name="hobex_connected" invisible="1"/>
+                        <field name="active_pos_session_ids" invisible="1"/>
+                        <field name="hobex_auth_token" invisible="1" readonly="1" force_save="1" groups="base.group_erp_manager"/>
+
+                        <!-- Open-session warning, rendered as a real
+                             Bootstrap alert instead of text inside an <i>. -->
+                        <div class="alert alert-warning d-flex align-items-center mb-3" role="alert"
+                             colspan="2" invisible="not active_pos_session_ids">
+                            <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"/>
+                            <span>Attention, there are active POS sessions based on this payment journal!</span>
+                        </div>
+
+                        <!-- Header row: hobex logo on the left, action buttons on the right.
+                             Logo is constrained to a sensible max width; buttons carry the
+                             icon as a child <i> so the button text doesn't get clobbered
+                             by FontAwesome class styling on the button element itself.
+                             Two logo variants are shipped: the dark-subtitle PNG is used
+                             on light themes, the light-subtitle PNG on dark themes;
+                             prefers-color-scheme picks the right one automatically. -->
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3"
+                             colspan="2">
+                            <picture>
+                                <source srcset="/pos_hobex/static/src/img/hobex_logo_dark.png"
+                                        media="(prefers-color-scheme: dark)"/>
+                                <img src="/pos_hobex/static/src/img/hobex_logo_light.png"
+                                     alt="hobex Logo"
+                                     style="max-width: 200px; height: auto;"/>
+                            </picture>
+                            <div class="d-flex flex-wrap gap-2" groups="base.group_erp_manager">
+                                <!-- Single auth button: clicking it both checks credentials
+                                     and (re-)fetches a fresh token, so a separate "Renew"
+                                     action is redundant. Visible at all times. -->
+                                <button name="hobex_get_auth_token" type="object"
+                                        class="btn btn-primary">
+                                    <i class="fa fa-handshake-o me-1" aria-hidden="true"/>
+                                    Check Connection
+                                </button>
+                                <button name="hobex_sample_transaction" type="object"
+                                        class="btn btn-secondary"
+                                        invisible="hobex_auth_token == False">
+                                    <i class="fa fa-credit-card me-1" aria-hidden="true"/>
+                                    Sample Transaction
+                                </button>
+                                <!-- External link to the hobex portal. Two <a> tags
+                                     toggled by terminal_mode so the user always lands
+                                     on the dashboard that matches the configured
+                                     environment (test vs. production). -->
+                                <a href="https://hobexplus.brunn.hobex.at/login"
+                                   target="_blank" rel="noopener noreferrer"
+                                   role="button" class="btn btn-link"
+                                   invisible="hobex_terminal_mode != 'testing'"
+                                   title="hobex Test Portal">
+                                    <i class="fa fa-external-link me-1" aria-hidden="true"/>
+                                    hobex Dashboard
+                                </a>
+                                <a href="https://online.hobex.at/login"
+                                   target="_blank" rel="noopener noreferrer"
+                                   role="button" class="btn btn-link"
+                                   invisible="hobex_terminal_mode != 'production'"
+                                   title="hobex Online Portal">
+                                    <i class="fa fa-external-link me-1" aria-hidden="true"/>
+                                    hobex Dashboard
+                                </a>
                             </div>
                         </div>
-                        <div class="row" invisible="active_pos_session_ids == False">
-                            <div class="col-12">
-                                <i class="fa fa-exclamation-circle" aria-hidden="true">Attention, there are active pos sessions based on this payment journal !</i>
-                            </div>
-                        </div>
-                        <group string="hobex Authentication">
-                            <field name="hobex_connected" readonly="1" invisible="1"/>
-                            <field name="active_pos_session_ids" invisible="1"/>
-                            <field name="hobex_terminal_mode"/>
-                            <field name="hobex_auth_token" invisible="1" readonly="1" force_save="1"/>
-                            <field name="hobex_api_address" groups="base.group_no_one"/>
-                            <field name="hobex_terminal_id"/>
-                            <field name="hobex_user"/>
-                            <field name="hobex_pass" password="True"/>
+
+                        <!-- Authentication fields. Now full-width parent so the
+                             default two-column rendering looks natural. -->
+                        <group string="hobex Authentication" colspan="2">
+                            <group>
+                                <field name="hobex_terminal_mode"/>
+                                <field name="hobex_terminal_id"/>
+                                <field name="hobex_api_address" groups="base.group_no_one"/>
+                            </group>
+                            <group>
+                                <field name="hobex_user" groups="base.group_erp_manager"/>
+                                <field name="hobex_pass" password="True" groups="base.group_erp_manager"/>
+                            </group>
                         </group>
-                        <group colspan="4" string="Transactions">
+
+                        <!-- Transactions list spans both columns. -->
+                        <group string="Transactions" colspan="2">
                             <field name="hobex_transaction_ids" nolabel="1" colspan="2">
                                 <list>
                                     <field name="state"/>
@@ -54,8 +109,10 @@
                                     <field name="response_text"/>
                                     <field name="amount"/>
                                     <field name="currency"/>
-                                    <button name="update_hobex_state" type="object" string="Hobex Status" class="btn btn-primary fa fa-credit-card"/>
-                                    <button name="reversal_hobex_transaction" type="object" string="Hobex Rückbuchen" class="btn btn-primary fa fa-credit-card"/>
+                                    <button name="update_hobex_state" type="object"
+                                            string="Hobex Status" icon="fa-refresh"/>
+                                    <button name="reversal_hobex_transaction" type="object"
+                                            string="Hobex Rückbuchen" icon="fa-undo"/>
                                 </list>
                             </field>
                         </group>
@@ -64,20 +121,5 @@
 
             </field>
         </record>
-        <!-- Inherit Form View to Modify it -->
-        <!--
-        <record id="view_pos_pos_form" model="ir.ui.view">
-            <field name="name">view_pos_pos_form</field>
-            <field name="model">pos.order</field>
-            <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
-            <field name="arch" type="xml">
-]list/field[@name='statement_id']" position="after">
-                    <field name="hobex_transactionId"/>
-                    <field name="hobex_receipt"/>
-                </xpath>
-
-            </field>
-        </record>
-        -->
     </data>
 </odoo>

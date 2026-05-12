@@ -1,0 +1,608 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* pos_hobex
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 19.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-11 15:19+0000\n"
+"PO-Revision-Date: 2026-05-11 15:19+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
+msgid ""
+"<i class=\"fa fa-exclamation-circle\" aria-hidden=\"true\">Attention, there "
+"are active pos sessions based on this payment journal !</i>"
+msgstr ""
+"<i class=\"fa fa-exclamation-circle\" aria-hidden=\"true\">Achtung, es gibt "
+"aktive Kassensitzungen, die diese Zahlungsmethode verwenden!</i>"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+msgid "AID"
+msgstr "AID"
+
+#. module: pos_hobex
+#: model:ir.model.fields.selection,name:pos_hobex.selection__pos_payment_hobex_transaction__state__abort
+msgid "Aborted"
+msgstr "Abgebrochen"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+msgid "Achtung Fehler"
+msgstr "Achtung Fehler"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__active_pos_session_ids
+msgid "Active POS Sessions"
+msgstr "Aktive Kassensitzungen"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__amount
+msgid "Amount"
+msgstr "Betrag"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+msgid "Autorisierungscode"
+msgstr "Autorisierungscode"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+msgid "Beleg#"
+msgstr "Beleg#"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
+msgid "Check Connection"
+msgstr "Verbindung prüfen"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_connected
+msgid "Connected"
+msgstr "Verbunden"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid ""
+"Could not reach the hobex server (%s). Please check your internet connection"
+" and the configured terminal mode."
+msgstr ""
+"Der hobex-Server (%s) konnte nicht erreicht werden. Bitte überprüfen Sie "
+"Ihre Internetverbindung und den konfigurierten Terminal-Modus."
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__create_uid
+msgid "Created by"
+msgstr "Erstellt von"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__create_date
+msgid "Created on"
+msgstr "Erstellt am"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+msgid "Crypto"
+msgstr "Crypto"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__currency
+msgid "Currency"
+msgstr "Währung"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+msgid ""
+"Das Terminal nicht scheint erreichbar zu sein. Bitte überprüfen Sie die "
+"Verbindung des Terminals mit dem Netzwerk und versuchen Sie es erneut."
+msgstr ""
+"Das Terminal scheint nicht erreichbar zu sein. Bitte überprüfen Sie die "
+"Verbindung des Terminals mit dem Netzwerk und versuchen Sie es erneut."
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+msgid "Die Transaktion wurde am Terminal abgebrochen"
+msgstr "Die Transaktion wurde am Terminal abgebrochen"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__display_name
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__display_name
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__display_name
+msgid "Display Name"
+msgstr "Anzeigename"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.view_pos_payment_form_hobex
+msgid "Ergebnis"
+msgstr "Ergebnis"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+msgid ""
+"Es ist ein Fehler bei der Kommunikation mit dem Odoo / hobex Server "
+"aufgetreten !"
+msgstr ""
+"Es ist ein Fehler bei der Kommunikation mit dem Odoo-/hobex-Server "
+"aufgetreten!"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+msgid "Es ist nicht möglich einen negativen Betrag zurückzubuchen."
+msgstr "Es ist nicht möglich, einen negativen Betrag zurückzubuchen."
+
+#. module: pos_hobex
+#: model:ir.model.fields.selection,name:pos_hobex.selection__pos_payment_hobex_transaction__state__failed
+msgid "Failed"
+msgstr "Fehlgeschlagen"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
+msgid "Hobex Rückbuchen"
+msgstr "Hobex Rückbuchen"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
+msgid "Hobex Status"
+msgstr "Hobex Status"
+
+#. module: pos_hobex
+#: model:ir.model,name:pos_hobex.model_pos_payment_hobex_transaction
+msgid "Hobex Transaction"
+msgstr "Hobex-Transaktion"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "Hobex transaction %s/%s not found in DB."
+msgstr "Hobex-Transaktion %s/%s wurde in der Datenbank nicht gefunden."
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__id
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__id
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__id
+msgid "ID"
+msgstr "ID"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+msgid "KAUF"
+msgstr "KAUF"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+msgid "Karte"
+msgstr "Karte"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.view_pos_payment_form_hobex
+msgid "Karten Details"
+msgstr "Karten-Details"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__write_uid
+msgid "Last Updated by"
+msgstr "Zuletzt aktualisiert von"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__write_date
+msgid "Last Updated on"
+msgstr "Zuletzt aktualisiert am"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__message
+msgid "Message"
+msgstr "Nachricht"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+msgid "Negative Beträge nicht möglich."
+msgstr "Negative Beträge nicht möglich."
+
+#. module: pos_hobex
+#: model:ir.model.fields.selection,name:pos_hobex.selection__pos_payment_hobex_transaction__state__ok
+msgid "Ok"
+msgstr "OK"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment.py:0
+msgid "Only successful transactions can be refunded!"
+msgstr "Nur erfolgreiche Transaktionen können zurückerstattet werden!"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+msgid "PAN"
+msgstr "PAN"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_pass
+msgid "Password"
+msgstr "Passwort"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__pos_payment_method_id
+msgid "Payment method"
+msgstr "Zahlungsmethode"
+
+#. module: pos_hobex
+#: model:ir.model.fields.selection,name:pos_hobex.selection__pos_payment_hobex_transaction__state__pending
+msgid "Pending"
+msgstr "Ausstehend"
+
+#. module: pos_hobex
+#: model:ir.model,name:pos_hobex.model_pos_payment_method
+msgid "Point of Sale Payment Methods"
+msgstr "Zahlungsmethoden des Kassensystems"
+
+#. module: pos_hobex
+#: model:ir.model,name:pos_hobex.model_pos_payment
+msgid "Point of Sale Payments"
+msgstr "Kassenzahlungen"
+
+#. module: pos_hobex
+#: model:ir.model.fields.selection,name:pos_hobex.selection__pos_payment_method__hobex_terminal_mode__production
+msgid "Production"
+msgstr "Echtbetrieb"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+msgid "RC:"
+msgstr "RC:"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__reference
+msgid "Reference"
+msgstr "Referenz"
+
+#. module: pos_hobex
+#: model:ir.model.fields.selection,name:pos_hobex.selection__pos_payment_hobex_transaction__state__refunded
+msgid "Refunded"
+msgstr "Zurückerstattet"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "Required fields for hobex are missing: %s"
+msgstr "Pflichtfelder für hobex fehlen: %s"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__response
+msgid "Response"
+msgstr "Antwort"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__response_code
+msgid "Response Code"
+msgstr "Antwort-Code"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__response_text
+msgid "Response Text"
+msgstr "Antwort-Text"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.view_pos_payment_form_hobex
+msgid "Rückerstatten"
+msgstr "Rückerstatten"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.view_pos_payment_form_hobex
+msgid "Rückerstattung"
+msgstr "Rückerstattung"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+msgid "STORNO"
+msgstr "STORNO"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
+msgid "Sample Transaction"
+msgstr "Beispieltransaktion"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__state
+msgid "State"
+msgstr "Status"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__tid
+msgid "TID"
+msgstr "TID"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_api_address
+msgid "Terminal Address"
+msgstr "Terminal-Adresse"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_terminal_id
+#: model:ir.model.fields,help:pos_hobex.field_pos_payment_hobex_transaction__tid
+msgid "Terminal ID"
+msgstr "Terminal-ID"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_terminal_mode
+msgid "Terminal Mode"
+msgstr "Terminal-Modus"
+
+#. module: pos_hobex
+#: model:ir.model.fields.selection,name:pos_hobex.selection__pos_payment_method__hobex_terminal_mode__testing
+msgid "Testmode"
+msgstr "Testmodus"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment.py:0
+msgid ""
+"There was a communication error with hobex. See the server log for details."
+msgstr ""
+"Es ist ein Kommunikationsfehler mit hobex aufgetreten. Details finden Sie "
+"im Server-Log."
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "There was an error: %s"
+msgstr "Es ist ein Fehler aufgetreten: %s"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "This method is only available for Hobex payment methods."
+msgstr "Diese Methode ist nur für hobex-Zahlungsmethoden verfügbar."
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "Timeout after 30 seconds."
+msgstr "Zeitüberschreitung nach 30 Sekunden."
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid ""
+"Timeout while contacting hobex (%s). Please check your internet connection "
+"and try again."
+msgstr ""
+"Zeitüberschreitung beim Kontakt zu hobex (%s). Bitte überprüfen Sie Ihre "
+"Internetverbindung und versuchen Sie es erneut."
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_auth_token
+msgid "Token"
+msgstr "Token"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__transaction_date
+msgid "Transaction Date"
+msgstr "Transaktionsdatum"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__transaction_id
+msgid "Transaction ID"
+msgstr "Transaktions-ID"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__transaction_type
+msgid "Transaction Type"
+msgstr "Transaktionsart"
+
+#. module: pos_hobex
+#: model:ir.model.constraint,message:pos_hobex.constraint_pos_payment_hobex_transaction_transactionid_tid_uniq
+msgid "TransactionID must be unique per TID!"
+msgstr "Die Transaktions-ID muss pro TID eindeutig sein!"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_transaction_ids
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
+msgid "Transactions"
+msgstr "Transaktionen"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.view_pos_payment_form_hobex
+msgid "Transaktion"
+msgstr "Transaktion"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__url
+msgid "URL"
+msgstr "URL"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+msgid "Unterschrift"
+msgstr "Unterschrift"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_user
+msgid "User"
+msgstr "Benutzer"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+msgid "hobex"
+msgstr "hobex"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_aid
+msgid "hobex Aid"
+msgstr "hobex AID"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+msgid "hobex Antwort"
+msgstr "hobex Antwort"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_approvalCode
+msgid "hobex Approval Code"
+msgstr "hobex Autorisierungscode"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
+msgid "hobex Authentication"
+msgstr "hobex Authentifizierung"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_cvm
+msgid "hobex CVM"
+msgstr "hobex CVM"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_brand
+msgid "hobex Card Brand"
+msgstr "hobex Kartenmarke"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_cardExpiry
+msgid "hobex Card Expiry"
+msgstr "hobex Karten-Ablaufdatum"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_cardIssuer
+msgid "hobex Card Issuer"
+msgstr "hobex Kartenherausgeber"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_cardNumber
+msgid "hobex Card Number"
+msgstr "hobex Kartennummer"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_actionCode
+msgid "hobex Crypto Code"
+msgstr "hobex Crypto-Code"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+msgid "hobex Fehler"
+msgstr "hobex Fehler"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+msgid "hobex Gerätefehler"
+msgstr "hobex Gerätefehler"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
+msgid "hobex Logo"
+msgstr "hobex Logo"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.view_pos_payment_form_hobex
+msgid "hobex Payment Details"
+msgstr "hobex Zahlungsdetails"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_receipt
+msgid "hobex Receipt Number"
+msgstr "hobex Belegnummer"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_reference
+msgid "hobex Ref Number"
+msgstr "hobex Referenznummer"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_responseCode
+msgid "hobex Response Code"
+msgstr "hobex Antwort-Code"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_responseText
+msgid "hobex Response Text"
+msgstr "hobex Antwort-Text"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_tid
+msgid "hobex TID"
+msgstr "hobex TID"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_transactionDate
+msgid "hobex Transaction Date"
+msgstr "hobex Transaktionsdatum"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_transactionId
+msgid "hobex Transaction ID"
+msgstr "hobex Transaktions-ID"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_transactionType
+msgid "hobex Transaction Type"
+msgstr "hobex Transaktionsart"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "hobex authentication failed: %s"
+msgstr "hobex-Authentifizierung fehlgeschlagen: %s"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment.py:0
+msgid "hobex refund failed: %s"
+msgstr "hobex-Rückerstattung fehlgeschlagen: %s"
+
+#. module: pos_hobex
+#: model:ir.actions.server,name:pos_hobex.ir_cron_renew_hobex_auth_ir_actions_server
+msgid "hobex renew auth"
+msgstr "hobex Authentifizierung erneuern"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "hobex request failed: %s"
+msgstr "hobex-Anfrage fehlgeschlagen: %s"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "hobex returned a malformed response: %s"
+msgstr "hobex hat eine ungültige Antwort geliefert: %s"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "hobex returned an unexpected response (HTTP %(status)s): %(body)s"
+msgstr "hobex hat eine unerwartete Antwort geliefert (HTTP %(status)s): %(body)s"

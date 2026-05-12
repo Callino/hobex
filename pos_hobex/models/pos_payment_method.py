@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError, AccessDenied
 import json
 import requests
 from urllib.parse import urljoin
 from requests.exceptions import ReadTimeout
-from werkzeug.routing import ValidationError
 import uuid
 import logging
 
@@ -16,7 +15,7 @@ class PosPaymentMethod(models.Model):
     _inherit = 'pos.payment.method'
 
     def _get_payment_terminal_selection(self):
-        return super(PosPaymentMethod, self)._get_payment_terminal_selection() + [('hobex', 'HOBEX')]
+        return super()._get_payment_terminal_selection() + [('hobex', 'HOBEX')]
 
     @api.depends('hobex_terminal_mode')
     def _compute_hobex_terminal_address(self):
@@ -26,7 +25,7 @@ class PosPaymentMethod(models.Model):
     @api.onchange('hobex_terminal_mode', 'hobex_user', 'hobex_pass')
     def _onchange_auth(self):
         for method in self:
-            method.hobex_auth_token = None
+            method.hobex_auth_token = False
 
     def _compute_active_pos_sessions(self):
         for method in self:
@@ -35,54 +34,129 @@ class PosPaymentMethod(models.Model):
                 ('payment_method_ids', 'in', method.id),
             ])
 
-    @api.depends('hobex_auth_token')
+    @api.depends('hobex_auth_token', 'use_payment_terminal')
     def _compute_hobex_connected(self):
-        for method in self:
-            method.hobex_connected = bool(method.use_payment_terminal=='hobex' and method.hobex_auth_token)
+        # hobex_auth_token is group-restricted; read it via sudo so the compute
+        # still resolves for users that don't have base.group_erp_manager.
+        for method in self.sudo():
+            method.hobex_connected = bool(method.use_payment_terminal == 'hobex' and method.hobex_auth_token)
 
-    hobex_terminal_id = fields.Char('Terminal ID', required_if_terminal='hobex')
+    hobex_terminal_id = fields.Char('Terminal ID')
     hobex_terminal_mode = fields.Selection([
-        ('testing', _(u"Testmode")),
-        ('production', _(u"Production")),
+        ('testing', "Testmode"),
+        ('production', "Production"),
     ], required=True, default='production', string="Terminal Mode")
     hobex_api_address = fields.Char('Terminal Address', compute='_compute_hobex_terminal_address', store=True)
-    hobex_user = fields.Char('User', required_if_terminal='hobex')
-    hobex_pass = fields.Char('Password', required_if_terminal='hobex')
-    hobex_auth_token = fields.Char('Token')
+    # Credentials: restricted to ERP managers so a POS cashier with read access
+    # to pos.payment.method cannot exfiltrate them. POS-facing methods below
+    # use .sudo() to read these where needed (same pattern as pos_adyen).
+    hobex_user = fields.Char('User', groups='base.group_erp_manager')
+    hobex_pass = fields.Char('Password', groups='base.group_erp_manager')
+    hobex_auth_token = fields.Char('Token', groups='base.group_erp_manager')
     hobex_connected = fields.Boolean('Connected', compute='_compute_hobex_connected', store=True)
     hobex_transaction_ids = fields.One2many('pos.payment.hobex.transaction', 'pos_payment_method_id', string="Transactions", readonly=True)
     active_pos_session_ids = fields.Many2many('pos.session', string="Active POS Sessions", compute='_compute_active_pos_sessions')
+
+    @api.model
+    def _load_pos_data_fields(self, config):
+        params = super()._load_pos_data_fields(config)
+        params += ['hobex_terminal_id']
+        return params
+
+    @api.constrains('use_payment_terminal', 'hobex_terminal_id', 'hobex_user', 'hobex_pass')
+    def _check_required_if_hobex(self):
+        for method in self:
+            if method.use_payment_terminal == 'hobex':
+                missing = []
+                if not method.hobex_terminal_id:
+                    missing.append(_('Terminal ID'))
+                if not method.hobex_user:
+                    missing.append(_('User'))
+                if not method.hobex_pass:
+                    missing.append(_('Password'))
+                if missing:
+                    raise ValidationError(_('Required fields for hobex are missing: %s') % ', '.join(missing))
 
     @api.model
     def hobex_cron_renew_auth(self):
         for method in self.search([
             ('use_payment_terminal', '=', 'hobex'),
             ('hobex_user', '!=', False),
-            ('hobex_pass', '!=', False)
+            ('hobex_pass', '!=', False),
         ]):
             try:
                 method.hobex_get_auth_token()
-            except:
+            except Exception:
                 # Called from cron - so just ignore it here
                 pass
 
-    def hobex_renew_auth_token(self):
-        self.hobex_get_auth_token()
-
     def hobex_get_auth_token(self):
-        for method in self:
+        # Reads hobex_user / hobex_pass and writes hobex_auth_token, all of
+        # which are restricted to base.group_erp_manager. Use sudo so the
+        # method works for the cron and for managers without that group.
+        for method in self.sudo():
             params = {
                 'userName': method.hobex_user,
-                'password': method.hobex_pass
+                'password': method.hobex_pass,
             }
+            url = urljoin(method.hobex_api_address, "/api/account/login")
             try:
-                result = requests.post(urljoin(method.hobex_api_address, "/api/account/login"), json=params, timeout=15)
-                if result.status_code == 401:
-                    res = json.loads(result.text)
-                    raise UserError(res['message'])
-                method.hobex_auth_token = json.loads(result.content)['token']
-            except Exception as e:
-                raise UserError(_(u'hobex authentication failed. Please check credentials !'))
+                result = requests.post(url, json=params, timeout=15)
+            except requests.exceptions.Timeout:
+                _logger.warning("hobex auth: timeout contacting %s", url, exc_info=True)
+                raise UserError(_(
+                    'Timeout while contacting hobex (%s). Please check your '
+                    'internet connection and try again.'
+                ) % url)
+            except requests.exceptions.ConnectionError:
+                _logger.warning("hobex auth: connection error to %s", url, exc_info=True)
+                raise UserError(_(
+                    'Could not reach the hobex server (%s). Please check your '
+                    'internet connection and the configured terminal mode.'
+                ) % url)
+            except requests.exceptions.RequestException as e:
+                _logger.warning("hobex auth: request failed for %s", url, exc_info=True)
+                raise UserError(_('hobex request failed: %s') % e)
+
+            if result.status_code == 401:
+                # Real "wrong credentials" path — surface the hobex message verbatim.
+                try:
+                    message = json.loads(result.text).get('message') or result.text
+                except ValueError:
+                    message = result.text
+                _logger.info("hobex auth: rejected by server (%s): %s", url, message)
+                raise UserError(_('hobex authentication failed: %s') % message)
+
+            if result.status_code != 200:
+                # 5xx, unexpected 4xx — distinguish from credential failure.
+                _logger.warning(
+                    "hobex auth: unexpected HTTP %s from %s: %s",
+                    result.status_code, url, result.text,
+                )
+                raise UserError(_(
+                    'hobex returned an unexpected response (HTTP %(status)s): %(body)s'
+                ) % {'status': result.status_code, 'body': result.text[:500]})
+
+            try:
+                token = json.loads(result.content)['token']
+            except (ValueError, KeyError) as e:
+                _logger.warning(
+                    "hobex auth: malformed success response from %s: %s",
+                    url, result.text, exc_info=True,
+                )
+                raise UserError(_('hobex returned a malformed response: %s') % e)
+
+            method.hobex_auth_token = token
+
+        # All errors raise UserError above; reaching this point means every
+        # record in self successfully authenticated. Return a notification
+        # action for button callers (the cron and internal callers ignore
+        # the return value, so this is safe).
+        return self._hobex_notify(
+            'success',
+            _('hobex connection successful'),
+            _('Authentication token was renewed.'),
+        )
 
     def hobex_sample_transaction(self):
         self.ensure_one()
@@ -92,23 +166,91 @@ class PosPaymentMethod(models.Model):
                 "tid": self.hobex_terminal_id,
                 "currency": "EUR",
                 "reference": str(uuid.uuid4())[:20],
-                "amount": 1.0
+                "amount": 0.01,
             }
         }
         headers = {
-            'Token': self.hobex_auth_token,
+            # hobex_auth_token is group-restricted; sudo() bypasses the field ACL
+            # for this single read.
+            'Token': self.sudo().hobex_auth_token,
         }
+        url = urljoin(self.hobex_api_address, "/api/transaction/payment")
         try:
-            result = requests.post(urljoin(self.hobex_api_address, "/api/transaction/payment"), json=payload, timeout=30, headers=headers)
-        except ReadTimeout as re:
-            raise UserError(_(u'Timeout after 30 seconds.'))
+            result = requests.post(url, json=payload, timeout=30, headers=headers)
+        except ReadTimeout:
+            _logger.warning("hobex sample: timeout contacting %s", url)
+            raise UserError(_('Timeout after 30 seconds.'))
+        except requests.exceptions.ConnectionError:
+            _logger.warning("hobex sample: connection error to %s", url, exc_info=True)
+            raise UserError(_(
+                'Could not reach the hobex server (%s). Please check your '
+                'internet connection and the configured terminal mode.'
+            ) % url)
         except Exception as e:
-            raise UserError(_(u'There was an error: %s') % (str(e), ))
+            _logger.warning("hobex sample: request failed for %s", url, exc_info=True)
+            raise UserError(_('There was an error: %s') % (str(e),))
         _logger.debug("Result Code: %s, Result: %s", result.status_code, result.content)
+
+        # Parse + surface a real notification.
+        try:
+            body = json.loads(result.text) if result.text else {}
+        except ValueError:
+            body = {}
+
+        if result.status_code == 401:
+            return self._hobex_notify('danger', _('hobex authentication failed'),
+                                     body.get('message') or result.text)
+        if result.status_code != 200:
+            return self._hobex_notify(
+                'danger',
+                _('hobex sample transaction failed (HTTP %s)') % result.status_code,
+                body.get('message') or (result.text[:300] if result.text else ''),
+            )
+
+        response_code = body.get('responseCode')
+        response_text = body.get('responseText') or ''
+        if response_code == "0":
+            details = []
+            if body.get('brand'):
+                details.append(_("Card: %s") % body['brand'])
+            if body.get('cardNumber'):
+                details.append(_("PAN: %s") % body['cardNumber'])
+            if body.get('approvalCode'):
+                details.append(_("Approval: %s") % body['approvalCode'])
+            if body.get('transactionId'):
+                details.append(_("Transaction ID: %s") % body['transactionId'])
+            message = "\n".join(details) or _("hobex accepted the sample transaction.")
+            return self._hobex_notify('success',
+                                     _('hobex sample transaction successful'),
+                                     message)
+
+        # Non-zero responseCode: terminal/business rejection — surface code + message.
+        return self._hobex_notify(
+            'warning',
+            _('hobex sample transaction rejected'),
+            _("Code %(code)s: %(text)s") % {
+                'code': response_code or '?',
+                'text': response_text or _('No further details from the terminal.'),
+            },
+        )
+
+    @staticmethod
+    def _hobex_notify(level, title, message):
+        """Return an ir.actions.client dict that displays a toast notification."""
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': title,
+                'message': message,
+                'type': level,        # 'success' / 'warning' / 'danger' / 'info'
+                'sticky': level != 'success',
+            },
+        }
 
     def hobex_new_transaction(self, amount, currency, reference, transaction_id):
         self.ensure_one()
-        if self.use_payment_terminal!='hobex':
+        if self.use_payment_terminal != 'hobex':
             raise UserError(_('This method is only available for Hobex payment methods.'))
         # We do create the new transaction in a new environment with a new cursor with an explicit commit
         with self.env.registry.cursor() as cr:
@@ -123,25 +265,31 @@ class PosPaymentMethod(models.Model):
                 'tid': self.hobex_terminal_id,
                 'url': url,
             })
-            # Änderungen dauerhaft in der Datenbank speichern
             env.cr.commit()
             _logger.debug("CREATED NEW Hobex Transaction: %s", transaction_id)
 
     def _get_hobex_headers(self):
         self.ensure_one()
-        if self.use_payment_terminal!='hobex':
+        if self.use_payment_terminal != 'hobex':
             raise UserError(_('This method is only available for Hobex payment methods.'))
         return {
-            'Token': self.hobex_auth_token,
-            'Content-Type': 'application/json'
+            # hobex_auth_token is group-restricted; sudo() lets POS callers
+            # (cashiers without base.group_erp_manager) build the auth header.
+            'Token': self.sudo().hobex_auth_token,
+            'Content-Type': 'application/json',
         }
 
     def hobex_start_sync_transaction(self, transaction_id):
         self.ensure_one()
-        if self.use_payment_terminal!='hobex':
+        if self.use_payment_terminal != 'hobex':
             raise UserError(_('This method is only available for Hobex payment methods.'))
-        # We do need a new cursor here - to be able to read the transaction we created before already with a new cursor
-        # The old cursor does not have this record!
+        # New cursor needed to read the transaction created above in another cursor
+        response = None
+        # Initialise transaction *before* the try so the except handler can
+        # safely reference it even if the search itself raises (DB error,
+        # cursor problem). An empty recordset .update() is a no-op so the
+        # `if transaction:` guard below also covers the "not found" case.
+        transaction = self.env['pos.payment.hobex.transaction']
         with self.env.registry.cursor() as cr:
             env = api.Environment(cr, self.env.user.id, self.env.context)
             try:
@@ -149,9 +297,9 @@ class PosPaymentMethod(models.Model):
                     ('tid', '=', self.hobex_terminal_id),
                     ('transaction_id', '=', transaction_id),
                 ], limit=1)
+                if not transaction:
+                    raise UserError(_('Hobex transaction %s/%s not found in DB.') % (self.hobex_terminal_id, transaction_id))
                 env.cr.commit()
-                # Do use Timeout of 60 seconds - otherwise the transaction will be aborted
-                # Because most Odoo Instances will run with 120 seconds timeout - if we also use 120 seconds timeout we will get a problem
                 _logger.debug("Start Hobex Sync Transaction: %s", transaction_id)
                 response = requests.post(
                     transaction.url,
@@ -170,61 +318,61 @@ class PosPaymentMethod(models.Model):
                     headers=self._get_hobex_headers(),
                 )
                 _logger.debug("Done Hobex Sync Transaction: %s", transaction_id)
-                # api.model call - will create own env for this
                 res = self.env['pos.payment.hobex.transaction']._update_transaction_with_hobex_result(
                     tid=transaction.tid,
                     transaction_id=transaction.transaction_id,
-                    response=response
+                    response=response,
                 )
                 return res, response
             except Exception as e:
-                transaction.update({
-                    'state': 'failed',
-                    'message': str(e),
-                })
+                # Only flag the transaction failed when we actually have one;
+                # otherwise we'd hit AttributeError / NameError on the way out
+                # and lose the original cause.
+                if transaction:
+                    transaction.update({
+                        'state': 'failed',
+                        'message': str(e),
+                    })
                 _logger.info('hobex Exception: %s', str(e))
                 return {
                     'responseCode': '-1',
                     'responseText': str(e),
-                }, response or None
+                }, response
 
     def hobex_reversal_transaction(self, transactionId):
         self.ensure_one()
-        if self.use_payment_terminal!='hobex':
+        if self.use_payment_terminal != 'hobex':
             raise UserError(_('This method is only available for Hobex payment methods.'))
-        url = urljoin(self.hobex_api_address, "/api/transaction/payment/%s/%s" % (self.hobex_terminal_id, transactionId, ))
+        url = urljoin(self.hobex_api_address, "/api/transaction/payment/%s/%s" % (self.hobex_terminal_id, transactionId))
         try:
             response = requests.delete(
                 url,
                 timeout=30,
                 headers=self._get_hobex_headers(),
             )
-            # api.model call - will create own env for this
             res = self.env['pos.payment.hobex.transaction']._update_transaction_with_hobex_result(
                 tid=self.hobex_terminal_id,
                 transaction_id=transactionId,
-                response=response
+                response=response,
             )
             return res, response
         except Exception as e:
             _logger.info('hobex Exception: %s', str(e))
+            return None, None
 
-    def _check_required_if_hobex(self):
-        """ If the field has 'required_if_terminal="hobex"' attribute, then it is required"""
-        empty_field = []
-        for method in self:
-            for k, f in method._fields.items():
-                if method.use_payment_terminal == 'hobex' and getattr(f, 'required_if_terminal', None) == "hobex" and not method[k]:
-                    empty_field.append(self.env['ir.model.fields'].search([('name', '=', k), ('model', '=', method._name)]).field_description)
-        if empty_field:
-            raise ValidationError((', ').join(empty_field))
-        return True
+    def _check_pos_user_or_su(self):
+        """Reject calls from non-POS users when not running as superuser.
 
-    _constraints = [
-        (_check_required_if_hobex, 'Required fields not filled', []),
-    ]
+        The proxy_hobex_* methods are exposed to the POS frontend via
+        pos.data.silentCall, so any logged-in user could in theory invoke
+        them. Restricting to POS users is the same defence pos_adyen uses.
+        """
+        if not self.env.su and not self.env.user.has_group('point_of_sale.group_pos_user'):
+            raise AccessDenied()
 
     def proxy_hobex_status_request(self, transaction_id):
+        self.ensure_one()
+        self._check_pos_user_or_su()
         transaction = self.env['pos.payment.hobex.transaction'].sudo().search([
             ('tid', '=', self.hobex_terminal_id),
             ('transaction_id', '=', transaction_id),
@@ -247,10 +395,12 @@ class PosPaymentMethod(models.Model):
             }
 
     def proxy_hobex_payment_request(self, data):
+        self.ensure_one()
+        self._check_pos_user_or_su()
         # Create String from transactionid
         data['transactionId'] = str(data['transactionId'])
-        # Remove - from reference
-        data['reference'] = data['reference'].replace('-', '')
+        # Hobex limits the reference to 20 chars: strip hyphens and truncate.
+        data['reference'] = data['reference'].replace('-', '')[:20]
         # We do create the new transaction in a new environment with a new cursor with an explicit commit
         self.hobex_new_transaction(
             amount=data['amount'],
@@ -259,13 +409,10 @@ class PosPaymentMethod(models.Model):
             transaction_id=data['transactionId'],
         )
         (res, response) = self.hobex_start_sync_transaction(data['transactionId'])
-        '''
-        This is for testing the Hobex cvm=1 Code - because i do not have any card here which will produce cvm=1 results 
-        res['cvm'] = 1
-        res['cvm_receipt'] = 'TEST123123'
-        '''
         return res
 
     def proxy_hobex_reversal_request(self, transaction_id):
+        self.ensure_one()
+        self._check_pos_user_or_su()
         res, response = self.hobex_reversal_transaction(transaction_id)
         return res

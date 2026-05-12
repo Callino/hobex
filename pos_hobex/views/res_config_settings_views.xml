@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_pos_hobex" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.pos.hobex</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <!--
+            Inject a hobex row at the end of the "Payment Terminals" block on
+            the POS settings page. The same pattern as Adyen / Stripe / Tyro /
+            etc.: a `module_pos_*` boolean toggles install/uninstall, and the
+            arrow button opens the matching payment-method form pre-filtered
+            on use_payment_terminal='hobex'.
+            -->
+            <xpath expr="//block[@id='pos_payment_terminals_section']" position="inside">
+                <setting title="The transactions are processed by hobex. Set your hobex credentials on the related payment method."
+                         string="hobex"
+                         help="Accept payments with a hobex payment terminal">
+                    <field name="module_pos_hobex"/>
+                    <button name="open_payment_method_form" icon="oi-arrow-right"
+                            type="object" string="Payment method" class="btn-link"
+                            context="{'selection': 'hobex', 'config_ids': [pos_config_id], 'provider_name': 'hobex'}"
+                            invisible="not module_pos_hobex"/>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+</odoo>

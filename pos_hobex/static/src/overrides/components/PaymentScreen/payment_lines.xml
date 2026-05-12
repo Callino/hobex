@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!--
+    Hide the "Force done" buttons on hobex payment lines.  The button is
+    rendered in three branches of PaymentScreenPaymentLines depending on
+    line.payment_status:
+      * 'force_done'                            (connection error)
+      * 'waitingCard'                           (waiting for card)
+      * 'waiting' / 'waitingCancel' / 'waitingCapture'  (request sent)
+
+    Each XPath sets the full t-if value explicitly so we don't depend on the
+    `add`+separator concatenation (which can race when multiple XPath rules
+    target overlapping elements — `locate_node` always returns the first
+    match).  OWL accepts the `and` keyword in expressions via
+    WORD_REPLACEMENT (`and` -> `&&`), so we can keep Pythonic syntax.
+    -->
+    <t t-name="pos_hobex.PaymentScreenPaymentLines"
+       t-inherit="point_of_sale.PaymentScreenPaymentLines"
+       t-inherit-mode="extension">
+
+        <!-- 1. 'force_done' branch button -->
+        <xpath expr="//t[contains(@t-elif, 'force_done')]/div[hasclass('send_force_done')]" position="attributes">
+            <attribute name="t-if">line.payment_method_id.use_payment_terminal != 'hobex'</attribute>
+        </xpath>
+
+        <!-- 2. 'waitingCard' branch button -->
+        <xpath expr="//t[contains(@t-elif, 'waitingCard')]//div[hasclass('send_force_done') and @title='Force Done']" position="attributes">
+            <attribute name="t-if">line.payment_method_id.use_payment_terminal != 'hobex'</attribute>
+        </xpath>
+
+        <!-- 3. waiting/waitingCancel/waitingCapture branch — keep original status check, combine with hobex check -->
+        <xpath expr="//t[contains(@t-elif, 'includes(line.payment_status)')]//div[hasclass('send_force_done') and @title='Force Done']" position="attributes">
+            <attribute name="t-if">line.payment_status == 'waiting' and line.payment_method_id.use_payment_terminal != 'hobex'</attribute>
+        </xpath>
+
+    </t>
+
+</templates>

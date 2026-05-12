@@ -1,47 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
-    <t t-name="HobexDetails" owl="1">
+    <t t-name="pos_hobex.HobexDetails">
         <div t-if="line.hobex_tid">
             <span class="pos-receipt-left-align">TID</span>
-            <span class="pos-receipt-right-align"><t t-raw="line.hobex_tid"/></span>
+            <span class="pos-receipt-right-align"><t t-out="line.hobex_tid"/></span>
         </div>
         <div t-if="line.hobex_receipt">
             <span class="pos-receipt-left-align">Beleg#</span>
-            <span class="pos-receipt-right-align"><t t-raw="line.hobex_receipt"/></span>
+            <span class="pos-receipt-right-align"><t t-out="line.hobex_receipt"/></span>
         </div>
         <div t-if="line.hobex_cardIssuer">
             <span class="pos-receipt-left-align">Karte</span>
-            <span class="pos-receipt-right-align"><t t-raw="line.hobex_cardIssuer"/></span>
+            <span class="pos-receipt-right-align"><t t-out="line.hobex_cardIssuer"/></span>
         </div>
         <div t-if="line.hobex_cardNumber">
             <span class="pos-receipt-left-align">PAN</span>
-            <span class="pos-receipt-right-align"><t t-raw="line.hobex_cardNumber"/></span>
+            <span class="pos-receipt-right-align"><t t-out="line.hobex_cardNumber"/></span>
         </div>
         <div style="width:100%;border-bottom:1px dotted;"/>
-        <div t-if="line.hobex_transactionType=='SELL'">
+        <div t-if="line.hobex_transactionType == 'SELL'">
             <span class="pos-receipt-left-align">KAUF</span>
-            <span class="pos-receipt-right-align"><t t-raw='props.formatCurrency(line.amount)' /></span>
+            <span class="pos-receipt-right-align"><t t-out="formatCurrency(line.amount)"/></span>
         </div>
-        <div t-if="line.hobex_transactionType=='VOID'">
+        <div t-if="line.hobex_transactionType == 'VOID'">
             <span class="pos-receipt-left-align">STORNO</span>
-            <span class="pos-receipt-right-align"><t t-raw='props.formatCurrency(line.amount)' /></span>
+            <span class="pos-receipt-right-align"><t t-out="formatCurrency(line.amount)"/></span>
         </div>
         <div style="width:100%;border-bottom:1px dotted;"/>
         <div t-if="line.hobex_approvalCode">
             <span class="pos-receipt-left-align">Autorisierungscode</span>
-            <span class="pos-receipt-right-align"><t t-raw="line.hobex_approvalCode"/></span>
+            <span class="pos-receipt-right-align"><t t-out="line.hobex_approvalCode"/></span>
         </div>
         <div t-if="line.hobex_aid">
             <span class="pos-receipt-left-align">AID</span>
-            <span class="pos-receipt-right-align"><t t-raw="line.hobex_aid"/></span>
+            <span class="pos-receipt-right-align"><t t-out="line.hobex_aid"/></span>
         </div>
         <div t-if="line.hobex_approvalCode">
-            <span class="pos-receipt-left-align">RC: <t t-raw="line.hobex_responseCode"/></span>
-            <span class="pos-receipt-right-align"><t t-raw="line.hobex_responseText"/></span>
+            <span class="pos-receipt-left-align">RC: <t t-out="line.hobex_responseCode"/></span>
+            <span class="pos-receipt-right-align"><t t-out="line.hobex_responseText"/></span>
         </div>
         <div t-if="line.hobex_actionCode">
             <span class="pos-receipt-left-align">Crypto</span>
-            <span class="pos-receipt-right-align"><t t-raw="line.hobex_actionCode"/></span>
+            <span class="pos-receipt-right-align"><t t-out="line.hobex_actionCode"/></span>
         </div>
         <t t-if="line.hobex_cvm == 1">
             <div style="text-align:center;">Unterschrift</div>
@@ -50,31 +50,16 @@
         </t>
     </t>
 
-    <t t-name="HobexSignReceipt">
-        <div class="pos-receipt">
-            <div style="width:100%;border-bottom:1px dotted;"/>
-            <div>
-                <span class="pos-receipt-left-align"><t t-raw="transactionDate"/></span>
-                <span class="pos-receipt-right-align"><t t-raw="transactionTime"/></span>
-            </div>
-
-            <div>HÄNDLERBELEG</div>
-            <t t-call="HobexDetails"/>
-            <div style="width:100%;border-bottom:1px dotted;"/>
-        </div>
-    </t>
-
-    <t t-name="OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension" owl="1">
-        <xpath expr="//div[hasclass('before-footer')]" position="after">
-            <t t-foreach="props.data.paymentlines" t-as="line" t-key="line_index">
+    <t t-name="pos_hobex.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('pos-receipt')]//div[hasclass('before-footer')]" position="before">
+            <t t-foreach="paymentLines" t-as="line" t-key="line_index">
                 <t t-if="line.hobex_transactionId">
                     <div style="width:100%;border-bottom:1px dotted;"/>
                     <div style="text-align:center;">hobex</div>
-                    <t t-call="HobexDetails"/>
+                    <t t-call="pos_hobex.HobexDetails"/>
                     <div style="width:100%;border-bottom:1px dotted;"/>
                 </t>
             </t>
         </xpath>
-
     </t>
 </templates>

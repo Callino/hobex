@@ -4,6 +4,9 @@ from urllib.parse import urljoin
 import json
 from odoo.exceptions import UserError
 import time
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class HobexTransaction(models.Model):
@@ -33,9 +36,10 @@ class HobexTransaction(models.Model):
         ('refunded', 'Refunded'),
     ], default='pending', string="State")
 
-    _sql_constraints = [
-        ('transactionid_tid_uniq', 'unique(transaction_id, tid)', 'TransactionID must be unique per TID!'),
-    ]
+    _transactionid_tid_uniq = models.Constraint(
+        'unique(transaction_id, tid)',
+        'TransactionID must be unique per TID!',
+    )
 
     @api.model
     def _update_transaction_with_hobex_result(self, tid, transaction_id, response):
@@ -75,16 +79,54 @@ class HobexTransaction(models.Model):
                         headers=transaction.pos_payment_method_id._get_hobex_headers(),
                     )
                     res['cvm_receipt'] = receipt_result.text
+                # ============================================================
+                # TODO TEMP TEST — REMOVE BEFORE PRODUCTION
+                # Force cvm == 1 + a fake merchant receipt so we can exercise
+                # print_hobex_receipt() in the POS without a real
+                # signature-required card. Only kicks in on a successful
+                # response so other code paths stay untouched.
+                # ============================================================
+                if res.get('responseCode') == "0":
+                    res['cvm'] = 1
+                    res['cvm_receipt'] = (
+                        "          HOBEX TEST            \r\n"
+                        "--------------------------------\r\n"
+                        "TID         : %s\r\n"
+                        "Transaktion : %s\r\n"
+                        "Karte       : VISA ****1234\r\n"
+                        "Betrag      : EUR 0.01\r\n"
+                        "--------------------------------\r\n"
+                        "Bitte unterschreiben:\r\n"
+                        "\r\n"
+                        "\r\n"
+                        "________________________________\r\n"
+                    ) % (tid, transaction_id)
+                # ============================================================
+                # END TEMP TEST
+                # ============================================================
+
                 if res['responseCode'] == "0":
-                    if res['responseText'] == 'OK':
-                        state = 'ok'
-                    elif res['responseText'] == 'VOID':
-                        state = 'refunded'
-                    elif res['responseText'] == 'INPROGRESS':
-                        state = 'pending'
+                    # responseCode == "0" means the hobex API accepted the request;
+                    # the human-readable responseText tells us the resulting state.
+                    # Unknown values are treated as 'ok' (success with extra info)
+                    # rather than crashing — the raw response is kept in `response`
+                    # for forensics.
+                    response_text = res.get('responseText')
+                    state_map = {
+                        'OK': 'ok',
+                        'VOID': 'refunded',
+                        'INPROGRESS': 'pending',
+                    }
+                    state = state_map.get(response_text, 'ok')
+                    if response_text not in state_map:
+                        _logger.warning(
+                            "Unknown hobex responseText %r on transaction %s/%s; "
+                            "treating as 'ok'. Full response: %s",
+                            response_text, tid, transaction_id, response.text,
+                        )
                     transaction.update({
                         'response_code': res['responseCode'],
-                        'response_text': res['responseText'],
+                        'response_text': response_text,
                         'response': response.text,
                         'state': state,
                     })
