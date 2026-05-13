@@ -86,6 +86,7 @@ class HobexTransaction(models.Model):
                 # signature-required card. Only kicks in on a successful
                 # response so other code paths stay untouched.
                 # ============================================================
+                '''
                 if res.get('responseCode') == "0":
                     res['cvm'] = 1
                     res['cvm_receipt'] = (
@@ -101,6 +102,7 @@ class HobexTransaction(models.Model):
                         "\r\n"
                         "________________________________\r\n"
                     ) % (tid, transaction_id)
+                '''
                 # ============================================================
                 # END TEMP TEST
                 # ============================================================
