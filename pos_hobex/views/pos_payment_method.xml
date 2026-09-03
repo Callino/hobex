@@ -129,6 +129,12 @@
                                 <field name="hobex_terminal_id" readonly="1"
                                        groups="base.group_no_one"
                                        invisible="hobex_terminal_ref_id == False"/>
+                                <field name="hobex_terminal_active" invisible="1"/>
+                                <div colspan="2" class="alert alert-warning mb-0" role="alert"
+                                     invisible="hobex_terminal_ref_id == False or hobex_terminal_active">
+                                    <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"/>
+                                    <span>hobex reports this terminal as inactive. Payments sent to it come back as a device error.</span>
+                                </div>
                             </group>
                             <group>
                                 <div colspan="2" groups="base.group_erp_manager">
@@ -184,17 +190,16 @@
                         <group string="hobex Account" colspan="2"
                                invisible="hobex_connected == False">
                             <group>
-                                <field name="hobex_merchant_name"/>
                                 <field name="hobex_can_refund" widget="boolean_toggle" readonly="1"/>
-                                <field name="hobex_can_void" widget="boolean_toggle" readonly="1"/>
                             </group>
                             <group>
-                                <div class="alert alert-info mb-0" role="alert"
-                                     invisible="hobex_can_refund">
-                                    <i class="fa fa-info-circle me-2" aria-hidden="true"/>
-                                    <span>The refund function is not enabled for this hobex account. Refunds at the point of sale will be rejected by hobex until they activate it.</span>
-                                </div>
+                                <field name="hobex_can_void" widget="boolean_toggle" readonly="1"/>
                             </group>
+                            <div colspan="2" class="alert alert-info mb-0" role="alert"
+                                 invisible="hobex_can_refund">
+                                <i class="fa fa-info-circle me-2" aria-hidden="true"/>
+                                <span>The refund function is not enabled for this hobex account. Refunds at the point of sale will be rejected by hobex until they activate it.</span>
+                            </div>
                         </group>
 
                         <!-- Transactions list spans both columns. -->
