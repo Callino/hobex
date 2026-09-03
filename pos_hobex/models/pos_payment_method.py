@@ -33,6 +33,29 @@ class PosPaymentMethod(models.Model):
         for method in self:
             method.hobex_auth_token = False
 
+    def _compute_hobex_transaction_count(self):
+        # sudo: the audit records are readable for POS and accounting managers
+        # only, but the count sits on a form every ERP manager may open.
+        domain = [('pos_payment_method_id', 'in', self.ids)]
+        groups = self.env['pos.payment.hobex.transaction'].sudo()._read_group(
+            domain, groupby=['pos_payment_method_id'], aggregates=['__count'])
+        counts = dict(groups)
+        for method in self:
+            method.hobex_transaction_count = counts.get(method, 0)
+
+    def action_view_hobex_transactions(self):
+        """Open this method's transaction log, newest first."""
+        self.ensure_one()
+        domain = [('pos_payment_method_id', '=', self.id)]
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Hobex Transactions'),
+            'res_model': 'pos.payment.hobex.transaction',
+            'view_mode': 'list,form',
+            'domain': domain,
+            'context': {'search_default_groupby_state': 0},
+        }
+
     def _compute_active_pos_sessions(self):
         for method in self:
             method.active_pos_session_ids = self.env['pos.session'].sudo().search([
@@ -62,14 +85,14 @@ class PosPaymentMethod(models.Model):
     hobex_connected = fields.Boolean('Connected', compute='_compute_hobex_connected', store=True)
     # Capabilities mirrored from GET /api/account/profile. They are refreshed
     # whenever a token is fetched (Check Connection button + daily cron) so the
-    # form can tell the admin up front whether hobex enabled refunds for this
+    # form can tell the admin up front whether Hobex enabled refunds for this
     # account. They are informational only: the refund path never blocks on
     # them, it relies on the 403 the API returns (see proxy_hobex_refund_request).
     hobex_can_refund = fields.Boolean('Refunds enabled', readonly=True,
-                                      help="hobex has enabled the refund (Gutschrift) "
+                                      help="Hobex has enabled the refund (Gutschrift) "
                                            "function for this account.")
     hobex_can_void = fields.Boolean('Reversals enabled', readonly=True,
-                                    help="hobex has enabled the reversal (Storno) "
+                                    help="Hobex has enabled the reversal (Storno) "
                                          "function for this account.")
     # Terminals available to this account, filled by hobex_load_terminals().
     # hobex_terminal_id stays the single source of truth for every API call —
@@ -79,14 +102,16 @@ class PosPaymentMethod(models.Model):
                                          string="Available Terminals", readonly=True)
     hobex_terminal_ref_id = fields.Many2one('hobex.terminal', string="Select Terminal",
                                             ondelete='set null',
-                                            help="Pick one of the terminals hobex reports "
+                                            help="Pick one of the terminals Hobex reports "
                                                  "for this account to fill in the Terminal ID.")
     # Mirrors the flag from the picked terminal so the form can warn about a
-    # terminal hobex reports as inactive - a payment against it would only
+    # terminal Hobex reports as inactive - a payment against it would only
     # come back as a device error.
     hobex_terminal_active = fields.Boolean(related='hobex_terminal_ref_id.hobex_active',
-                                           string="Terminal active at hobex")
+                                           string="Terminal active at Hobex")
     hobex_transaction_ids = fields.One2many('pos.payment.hobex.transaction', 'pos_payment_method_id', string="Transactions", readonly=True)
+    hobex_transaction_count = fields.Integer(compute='_compute_hobex_transaction_count',
+                                             string="Transactions")
     active_pos_session_ids = fields.Many2many('pos.session', string="Active POS Sessions", compute='_compute_active_pos_sessions')
 
     @api.model
@@ -107,7 +132,7 @@ class PosPaymentMethod(models.Model):
                 missing.append(_('User'))
             if not method.hobex_pass:
                 missing.append(_('Password'))
-            # The Terminal ID is only demanded once hobex reported the account's
+            # The Terminal ID is only demanded once Hobex reported the account's
             # terminals. The setup flow is credentials -> Check Connection ->
             # Load Terminals -> pick one, so a record holding nothing but
             # credentials has to be saveable — otherwise the admin could never
@@ -116,7 +141,7 @@ class PosPaymentMethod(models.Model):
             if method.hobex_terminal_ids and not method.hobex_terminal_id:
                 missing.append(_('Terminal ID'))
             if missing:
-                raise ValidationError(_('Required fields for hobex are missing: %s') % ', '.join(missing))
+                raise ValidationError(_('Required fields for Hobex are missing: %s') % ', '.join(missing))
 
     @api.model
     def hobex_cron_renew_auth(self):
@@ -147,46 +172,46 @@ class PosPaymentMethod(models.Model):
             except requests.exceptions.Timeout:
                 _logger.warning("hobex auth: timeout contacting %s", url, exc_info=True)
                 raise UserError(_(
-                    'Timeout while contacting hobex (%s). Please check your '
+                    'Timeout while contacting Hobex (%s). Please check your '
                     'internet connection and try again.'
                 ) % url)
             except requests.exceptions.ConnectionError:
                 _logger.warning("hobex auth: connection error to %s", url, exc_info=True)
                 raise UserError(_(
-                    'Could not reach the hobex server (%s). Please check your '
+                    'Could not reach the Hobex server (%s). Please check your '
                     'internet connection and the configured terminal mode.'
                 ) % url)
             except requests.exceptions.RequestException as e:
                 _logger.warning("hobex auth: request failed for %s", url, exc_info=True)
-                raise UserError(_('hobex request failed: %s') % e)
+                raise UserError(_('Hobex request failed: %s') % e)
 
             if result.status_code == 401:
-                # Real "wrong credentials" path — surface the hobex message verbatim.
+                # Real "wrong credentials" path — surface the Hobex message verbatim.
                 try:
                     message = json.loads(result.text).get('message') or result.text
                 except ValueError:
                     message = result.text
                 _logger.info("hobex auth: rejected by server (%s): %s", url, message)
-                raise UserError(_('hobex authentication failed: %s') % message)
+                raise UserError(_('Hobex authentication failed: %s') % message)
 
             if result.status_code != 200:
                 # 5xx, unexpected 4xx — distinguish from credential failure.
                 _logger.warning(
-                    "hobex auth: unexpected HTTP %s from %s: %s",
+                    "Hobex auth: unexpected HTTP %s from %s: %s",
                     result.status_code, url, result.text,
                 )
                 raise UserError(_(
-                    'hobex returned an unexpected response (HTTP %(status)s): %(body)s'
+                    'Hobex returned an unexpected response (HTTP %(status)s): %(body)s'
                 ) % {'status': result.status_code, 'body': result.text[:500]})
 
             try:
                 token = json.loads(result.content)['token']
             except (ValueError, KeyError) as e:
                 _logger.warning(
-                    "hobex auth: malformed success response from %s: %s",
+                    "Hobex auth: malformed success response from %s: %s",
                     url, result.text, exc_info=True,
                 )
-                raise UserError(_('hobex returned a malformed response: %s') % e)
+                raise UserError(_('Hobex returned a malformed response: %s') % e)
 
             method.hobex_auth_token = token
             # Token is valid now, so the calls below will succeed.
@@ -210,10 +235,10 @@ class PosPaymentMethod(models.Model):
         else:
             message = _('Authentication token was renewed, %s terminal(s) '
                         'available for this account.') % terminal_count
-        return self._hobex_notify('success', _('hobex connection successful'), message)
+        return self._hobex_notify('success', _('Hobex connection successful'), message)
 
     def _hobex_api_get(self, endpoint, timeout=15):
-        """GET a hobex endpoint with the account token and return its JSON body.
+        """GET a Hobex endpoint with the account token and return its JSON body.
 
         Every transport failure and every non-200 answer is translated into a
         UserError the admin can act on, so callers only ever deal with parsed
@@ -225,20 +250,20 @@ class PosPaymentMethod(models.Model):
             response = requests.get(url, timeout=timeout, headers=self._get_hobex_headers())
         except requests.exceptions.Timeout:
             _logger.warning("hobex GET %s: timeout", url)
-            raise UserError(_('Timeout while contacting hobex (%s).') % url)
+            raise UserError(_('Timeout while contacting Hobex (%s).') % url)
         except requests.exceptions.ConnectionError:
             _logger.warning("hobex GET %s: connection error", url, exc_info=True)
             raise UserError(_(
-                'Could not reach the hobex server (%s). Please check your '
+                'Could not reach the Hobex server (%s). Please check your '
                 'internet connection and the configured terminal mode.'
             ) % url)
         except requests.exceptions.RequestException as e:
             _logger.warning("hobex GET %s: request failed", url, exc_info=True)
-            raise UserError(_('hobex request failed: %s') % e)
+            raise UserError(_('Hobex request failed: %s') % e)
 
         if response.status_code != 200:
             raise UserError(_(
-                'hobex request to %(endpoint)s failed (HTTP %(status)s): %(body)s'
+                'Hobex request to %(endpoint)s failed (HTTP %(status)s): %(body)s'
             ) % {
                 'endpoint': endpoint,
                 'status': response.status_code,
@@ -250,7 +275,7 @@ class PosPaymentMethod(models.Model):
         except ValueError as e:
             _logger.warning("hobex GET %s: malformed response: %s",
                             url, response.text, exc_info=True)
-            raise UserError(_('hobex returned a malformed response: %s') % e)
+            raise UserError(_('Hobex returned a malformed response: %s') % e)
 
     def hobex_get_profile(self):
         """Return the parsed body of GET /api/account/profile.
@@ -264,7 +289,7 @@ class PosPaymentMethod(models.Model):
     def _hobex_refund_allowed(self):
         """Check the account's refund permission before booking a credit.
 
-        hobex enables the refund per account, and the permission has to be
+        Hobex enables the refund per account, and the permission has to be
         verified on /api/account/profile before a credit is executed. The
         answer is mirrored onto the payment method so the form keeps showing
         the current state.
@@ -274,7 +299,7 @@ class PosPaymentMethod(models.Model):
         letting it through, and the refund POST still answers 403 by itself
         when the function is not enabled.
 
-        :returns: False only when hobex explicitly reports canRefund = false
+        :returns: False only when Hobex explicitly reports canRefund = false
         """
         self.ensure_one()
         method = self.sudo()
@@ -304,7 +329,7 @@ class PosPaymentMethod(models.Model):
         count = self._hobex_sync_terminals()
         return self._hobex_notify(
             'success',
-            _('hobex terminals loaded'),
+            _('Hobex terminals loaded'),
             _('%s terminal(s) available for this account.') % count,
         )
 
@@ -315,12 +340,12 @@ class PosPaymentMethod(models.Model):
         terminal list, but /api/terminals is the flat, purpose-built one and
         does not drag along comm/ecr credentials we have no business storing.
 
-        Returns the number of terminals hobex reported.
+        Returns the number of terminals Hobex reported.
         """
         self.ensure_one()
         entries = self._hobex_api_get("/api/terminals")
         if not isinstance(entries, list):
-            raise UserError(_('hobex returned an unexpected terminal list: %s')
+            raise UserError(_('Hobex returned an unexpected terminal list: %s')
                             % entries)
 
         Terminal = self.env['hobex.terminal'].sudo()
@@ -344,7 +369,7 @@ class PosPaymentMethod(models.Model):
             else:
                 Terminal.create(dict(vals, tid=tid, pos_payment_method_id=self.id))
 
-        # Drop terminals hobex no longer reports. The Many2one is
+        # Drop terminals Hobex no longer reports. The Many2one is
         # ondelete='set null', so a stale selection clears itself instead of
         # blocking the delete — hobex_terminal_id keeps the configured value.
         stale = Terminal.browse([t.id for tid, t in existing.items() if tid not in seen])
@@ -404,7 +429,7 @@ class PosPaymentMethod(models.Model):
         except requests.exceptions.ConnectionError:
             _logger.warning("hobex sample: connection error to %s", url, exc_info=True)
             raise UserError(_(
-                'Could not reach the hobex server (%s). Please check your '
+                'Could not reach the Hobex server (%s). Please check your '
                 'internet connection and the configured terminal mode.'
             ) % url)
         except Exception as e:
@@ -419,12 +444,12 @@ class PosPaymentMethod(models.Model):
             body = {}
 
         if result.status_code == 401:
-            return self._hobex_notify('danger', _('hobex authentication failed'),
+            return self._hobex_notify('danger', _('Hobex authentication failed'),
                                      body.get('message') or result.text)
         if result.status_code != 200:
             return self._hobex_notify(
                 'danger',
-                _('hobex sample transaction failed (HTTP %s)') % result.status_code,
+                _('Hobex sample transaction failed (HTTP %s)') % result.status_code,
                 body.get('message') or (result.text[:300] if result.text else ''),
             )
 
@@ -440,15 +465,15 @@ class PosPaymentMethod(models.Model):
                 details.append(_("Approval: %s") % body['approvalCode'])
             if body.get('transactionId'):
                 details.append(_("Transaction ID: %s") % body['transactionId'])
-            message = "\n".join(details) or _("hobex accepted the sample transaction.")
+            message = "\n".join(details) or _("Hobex accepted the sample transaction.")
             return self._hobex_notify('success',
-                                     _('hobex sample transaction successful'),
+                                     _('Hobex sample transaction successful'),
                                      message)
 
         # Non-zero responseCode: terminal/business rejection — surface code + message.
         return self._hobex_notify(
             'warning',
-            _('hobex sample transaction rejected'),
+            _('Hobex sample transaction rejected'),
             _("Code %(code)s: %(text)s") % {
                 'code': response_code or '?',
                 'text': response_text or _('No further details from the terminal.'),
@@ -482,7 +507,7 @@ class PosPaymentMethod(models.Model):
         return True
 
     # Endpoint per transaction kind. A refund ("Gutschrift") is a standalone
-    # credit: hobex needs no reference to an earlier transaction and accepts an
+    # credit: Hobex needs no reference to an earlier transaction and accepts an
     # arbitrary amount, so the two kinds only differ in the URL and in the
     # payload built by hobex_start_sync_transaction().
     HOBEX_ENDPOINTS = {
@@ -496,7 +521,7 @@ class PosPaymentMethod(models.Model):
             raise UserError(_('This method is only available for Hobex payment methods.'))
         if not self.hobex_terminal_id:
             # The form-level constraint lets a half-configured method be saved
-            # so the terminal list can be fetched; refuse to talk to hobex
+            # so the terminal list can be fetched; refuse to talk to Hobex
             # without a TID rather than sending a request that cannot work.
             raise UserError(_(
                 'No terminal is selected for the payment method "%s". Open it and '
@@ -621,11 +646,11 @@ class PosPaymentMethod(models.Model):
         <tid>/<transactionId>. The reversal route (DELETE on the payment URL)
         only accepts a *completed* transaction and answers HTTP 400
         "Transaction State is not OK!" for one that is still waiting for the
-        card. hobex also notes that the abort is no longer possible once the
+        card. Hobex also notes that the abort is no longer possible once the
         card has been tapped.
 
         The pending POST /api/transaction/payment is deliberately NOT touched
-        here - hobex lets it run and answers it with responseCode 8004
+        here - Hobex lets it run and answers it with responseCode 8004
         ("aborted at terminal"). That response is what flips the payment line,
         which is also why this method must not write to the transaction record:
         the still-open payment request is the one that owns its final state,
@@ -644,7 +669,7 @@ class PosPaymentMethod(models.Model):
 
         if response.status_code == 200:
             # The body optionally names the transaction that was aborted. An
-            # empty body means hobex accepted the command without reporting an
+            # empty body means Hobex accepted the command without reporting an
             # aborted transaction - worth seeing in the log when the terminal
             # keeps waiting for the card anyway.
             _logger.info("hobex abort: accepted for %s/%s, response: %s",
@@ -652,15 +677,15 @@ class PosPaymentMethod(models.Model):
             return {'error': False}
 
         if response.status_code == 403:
-            # hobex enables the abort per account, same as the refund.
+            # Hobex enables the abort per account, same as the refund.
             _logger.warning("hobex abort: not enabled for this account (%s)", url)
             return {'error': True, 'message': _(
-                'The abort function is not enabled for this hobex account. '
-                'Please ask hobex to activate it.'
+                'The abort function is not enabled for this Hobex account. '
+                'Please ask Hobex to activate it.'
             )}
 
         if response.status_code in (400, 404):
-            # 400 = already captured or cancelled, 404 = hobex never saw the
+            # 400 = already captured or cancelled, 404 = Hobex never saw the
             # transaction. Both mean there is nothing left to abort, and the
             # still-open payment request reports the outcome anyway, so this is
             # not something the cashier has to act on.
@@ -705,11 +730,11 @@ class PosPaymentMethod(models.Model):
         else:
             return {
                 'error': True,
-                'message': _('hobex transaction not found'),
+                'message': _('Hobex transaction not found'),
             }
 
     def _hobex_run_transaction(self, data, kind):
-        """Create the audit record and run the synchronous hobex call.
+        """Create the audit record and run the synchronous Hobex call.
 
         Shared by the payment and the refund proxy: the two differ only in the
         endpoint, which `kind` selects via HOBEX_ENDPOINTS.
@@ -738,17 +763,17 @@ class PosPaymentMethod(models.Model):
     def proxy_hobex_refund_request(self, data):
         """Book a standalone credit (Gutschrift) on the terminal.
 
-        hobex wants a *positive* amount on /api/transaction/refund and rejects
+        Hobex wants a *positive* amount on /api/transaction/refund and rejects
         0 or a negative value with "Invalid Amount" — the POS sends the amount
         of a negative payment line, so normalise it here rather than relying on
         every caller to do it.
 
         The account's permission is verified on GET /api/account/profile
         before the credit is sent (_hobex_refund_allowed). Should that check
-        pass but hobex still refuse, the refund POST answers 403 and
+        pass but Hobex still refuse, the refund POST answers 403 and
         _update_transaction_with_hobex_result() turns it into a responseCode of
         '-403' plus `hobex_forbidden` - the POS renders the same "needs to be
-        enabled by hobex" message for both.
+        enabled by Hobex" message for both.
         """
         self.ensure_one()
         self._check_pos_user_or_su()
@@ -760,12 +785,12 @@ class PosPaymentMethod(models.Model):
             }
         if not self._hobex_refund_allowed():
             # Same shape as the 403 the refund itself would answer with, so the
-            # POS renders the "needs to be enabled by hobex" message either way.
+            # POS renders the "needs to be enabled by Hobex" message either way.
             return {
                 'responseCode': '-403',
                 'responseText': _(
                     'The refund (Gutschrift) function is not enabled for this '
-                    'hobex account. Please ask hobex to activate it.'
+                    'Hobex account. Please ask Hobex to activate it.'
                 ),
                 'hobex_forbidden': True,
             }

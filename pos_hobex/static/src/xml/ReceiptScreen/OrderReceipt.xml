@@ -55,7 +55,7 @@
             <t t-foreach="paymentLines" t-as="line" t-key="line_index">
                 <t t-if="line.hobex_transactionId">
                     <div style="width:100%;border-bottom:1px dotted;"/>
-                    <div style="text-align:center;">hobex</div>
+                    <div style="text-align:center;">Hobex</div>
                     <t t-call="pos_hobex.HobexDetails"/>
                     <div style="width:100%;border-bottom:1px dotted;"/>
                 </t>

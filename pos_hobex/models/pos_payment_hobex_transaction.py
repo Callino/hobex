@@ -20,7 +20,7 @@ class HobexTransaction(models.Model):
     transaction_date = fields.Datetime('Transaction Date', default=lambda self: fields.Datetime.now())
     pos_payment_method_id = fields.Many2one('pos.payment.method', string="Payment method", required=True)
     transaction_type = fields.Integer('Transaction Type', default=1)
-    # Which hobex endpoint this record was sent to. 'refund' is a standalone
+    # Which Hobex endpoint this record was sent to. 'refund' is a standalone
     # credit (Gutschrift) with no link to an earlier transaction, as opposed to
     # the reversal (VOID) that cancels one — see hobex_reversal_transaction().
     kind = fields.Selection([
@@ -50,7 +50,7 @@ class HobexTransaction(models.Model):
 
     @staticmethod
     def _hobex_error_message(response):
-        """Pull the human readable `message` out of a hobex error body."""
+        """Pull the human readable `message` out of a Hobex error body."""
         try:
             return json.loads(response.text).get('message') or response.text
         except (ValueError, AttributeError):
@@ -66,19 +66,19 @@ class HobexTransaction(models.Model):
             ], limit=1)
 
             if response.status_code == 400:
-                # 400 = Bad Request. Reachable for refunds, where hobex
+                # 400 = Bad Request. Reachable for refunds, where Hobex
                 # validates tid -> currency -> amount and answers e.g.
                 # {"message": "Invalid Amount."}. Surface just the message.
                 raise UserError(self._hobex_error_message(response))
             elif response.status_code == 403:
                 # 403 = the account is not cleared for this operation. The
                 # refund (Gutschrift) function in particular has to be enabled
-                # by hobex per account (profile flag `canRefund`). Return a
+                # by Hobex per account (profile flag `canRefund`). Return a
                 # structured result instead of raising so the POS can show a
                 # message the cashier can act on.
                 message = self._hobex_error_message(response)
                 _logger.info(
-                    "hobex refused transaction %s/%s with 403: %s",
+                    "Hobex refused transaction %s/%s with 403: %s",
                     tid, transaction_id, message,
                 )
                 transaction.update({
@@ -93,17 +93,17 @@ class HobexTransaction(models.Model):
                     'hobex_forbidden': True,
                 }
             elif response.status_code == 404 and transaction.state == 'pending':
-                # 404 = Transaction is not found on hobex side - but our state is pending - so it is failed
+                # 404 = Transaction is not found on Hobex side - but our state is pending - so it is failed
                 transaction.state = 'failed'
                 return
             elif response.status_code == 404:
-                # 404 = Transaction is not found on hobex side
+                # 404 = Transaction is not found on Hobex side
                 transaction.state = 'failed'
                 return
             elif response.status_code == 200:
                 res = json.loads(response.text)
                 # .get(): the signature receipt is a property of the card
-                # verification method, and not every hobex response carries a
+                # verification method, and not every Hobex response carries a
                 # `cvm` key. A missing key must not blow up the whole call —
                 # it just means there is no receipt to fetch.
                 # cvm is a number on the transaction endpoints (1 = signature)
@@ -112,7 +112,7 @@ class HobexTransaction(models.Model):
                 # silently skipped whenever the result arrives over the status
                 # poll instead of the original request.
                 if res.get('responseCode') == "0" and res.get('cvm') in (1, 'SIGNATURE'):
-                    # We do fetch the receipt from hobex - and include it in the response
+                    # We do fetch the receipt from Hobex - and include it in the response
                     receipt_url = urljoin(transaction.pos_payment_method_id.hobex_api_address, "/api/transaction/download")
                     receipt_result = requests.get(
                         receipt_url,
@@ -168,7 +168,7 @@ class HobexTransaction(models.Model):
                         'state': 'pending',
                     })
                 elif response_code == "0":
-                    # responseCode == "0" means the hobex API accepted the
+                    # responseCode == "0" means the Hobex API accepted the
                     # request. Status V2 states the outcome in its own `state`
                     # field, the transaction endpoints only in responseText.
                     # Unknown values are treated as 'ok' (success with extra
@@ -184,7 +184,7 @@ class HobexTransaction(models.Model):
                     state = state_map.get(raw_state, 'ok')
                     if raw_state not in state_map:
                         _logger.warning(
-                            "Unknown hobex state %r on transaction %s/%s; "
+                            "Unknown Hobex state %r on transaction %s/%s; "
                             "treating as 'ok'. Full response: %s",
                             raw_state, tid, transaction_id, response.text,
                         )
@@ -209,7 +209,7 @@ class HobexTransaction(models.Model):
 
     def update_hobex_state(self, sync=False):
         '''
-        Do get the current state of this transaction from hobex side
+        Do get the current state of this transaction from Hobex side
         '''
         h = self.pos_payment_method_id._get_hobex_headers()
         url = urljoin(self.pos_payment_method_id.hobex_api_address, "/api/v2/transactions/%(terminalid)s/%(transactionid)s" % {

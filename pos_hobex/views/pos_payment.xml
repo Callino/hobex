@@ -2,12 +2,12 @@
 <odoo>
     <!-- Inherit Form View to Modify it -->
     <record id="view_pos_payment_form_hobex" model="ir.ui.view">
-        <field name="name">pos.payment.form hobex</field>
+        <field name="name">pos.payment.form Hobex</field>
         <field name="model">pos.payment</field>
         <field name="inherit_id" ref="point_of_sale.view_pos_payment_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='session_id']/.." position="after">
-                <group name="hobex" invisible="hobex_transactionId == False" string="hobex Payment Details">
+                <group name="hobex" invisible="hobex_transactionId == False" string="Hobex Payment Details">
                     <group string="Transaction">
                         <field name="hobex_receipt"/>
                         <field name="hobex_approvalCode"/>
@@ -31,9 +31,9 @@
                         <field name="hobex_cvm"/>
                     </group>
                     <!--
-                    Two distinct hobex operations, deliberately kept apart:
+                    Two distinct Hobex operations, deliberately kept apart:
                       * Storno (VOID)  - cancels the original transaction.
-                        Only possible while hobex has not closed the batch,
+                        Only possible while Hobex has not closed the batch,
                         and only for a successful SELL.
                       * Gutschrift     - an independent credit via
                         /api/transaction/refund. Needs no reference to the
@@ -45,9 +45,9 @@
                                invisible="hobex_refund_transaction_id == False"/>
                         <div colspan="2">
                             <button type="object" name="hobex_reversal"
-                                    string="Storno (VOID)" class="btn-secondary"
+                                    string="Reversal (VOID)" class="btn-secondary"
                                     invisible="hobex_transactionType != 'SELL' or hobex_responseText != 'OK'"
-                                    help="Cancels the original transaction on the hobex side. Only possible before the end of day."/>
+                                    help="Cancels the original transaction on the Hobex side. Only possible before the end of day."/>
                             <button type="object" name="hobex_refund"
                                     string="Refund (Credit)" class="btn-secondary ms-2"
                                     invisible="hobex_refund_transaction_id != False"
