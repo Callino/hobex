@@ -110,12 +110,16 @@
         <div style="font-size: 22px; color: #e30613; margin-bottom: 8px;
                     font-weight: 700;">
           <i class="fa fa-undo" aria-hidden="true" style="margin-right: 10px;"></i>
-          <span>Storno &amp; Refund</span>
+          <span>Storno &amp; Gutschrift</span>
         </div>
         <p style="margin: 0; color: #4a5466;">
-          Reversal direkt aus Odoo. Ein <em>Storno</em> setzt sowohl die
+          Beides direkt aus Odoo. Ein <em>Storno</em> setzt sowohl die
           POS-Zahlung als auch den verkn&uuml;pften hobex-Transaktions&shy;datensatz
           auf <code>refunded</code> &mdash; der Audit-Trail bleibt konsistent.
+          Eine <em>Gutschrift</em> ist eine eigenst&auml;ndige Transaktion ohne
+          Bezug zum urspr&uuml;nglichen Verkauf und funktioniert daher auch nach
+          dem Tagesabschluss &mdash; an der Kasse einfach &uuml;ber den normalen
+          R&uuml;ckgabe-Vorgang.
         </p>
       </div>
 

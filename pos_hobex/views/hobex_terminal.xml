@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!--
+        Terminals are a read-only mirror of GET /api/terminals, refreshed by
+        the "Load Terminals" button on the payment method. Nothing here is
+        meant to be edited by hand: a manual change would be overwritten on
+        the next load, so every field is readonly and creation is disabled.
+        -->
+        <record id="hobex_terminal_view_list" model="ir.ui.view">
+            <field name="name">hobex.terminal.list</field>
+            <field name="model">hobex.terminal</field>
+            <field name="arch" type="xml">
+                <list string="hobex Terminals" create="false" edit="false"
+                      decoration-muted="not hobex_active">
+                    <field name="tid"/>
+                    <field name="merchant_name"/>
+                    <field name="company_name" optional="hide"/>
+                    <field name="terminal_type"/>
+                    <field name="vu" optional="hide"/>
+                    <field name="city"/>
+                    <field name="hobex_active" widget="boolean_toggle" readonly="1"/>
+                    <field name="pos_payment_method_id" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="hobex_terminal_view_form" model="ir.ui.view">
+            <field name="name">hobex.terminal.form</field>
+            <field name="model">hobex.terminal</field>
+            <field name="arch" type="xml">
+                <form string="hobex Terminal" create="false" edit="false">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="tid"/>
+                            <h1><field name="tid" readonly="1"/></h1>
+                        </div>
+                        <div class="alert alert-info" role="alert">
+                            <i class="fa fa-info-circle me-2" aria-hidden="true"/>
+                            <span>This data comes from hobex and is overwritten every time the terminals are loaded.</span>
+                        </div>
+                        <group>
+                            <group string="hobex">
+                                <field name="merchant_name" readonly="1"/>
+                                <field name="company_name" readonly="1"/>
+                                <field name="vu" readonly="1"/>
+                                <field name="hobex_active" widget="boolean_toggle" readonly="1"/>
+                            </group>
+                            <group string="Terminal">
+                                <field name="terminal_type" readonly="1"/>
+                                <field name="city" readonly="1"/>
+                                <field name="pos_payment_method_id" readonly="1"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="hobex_terminal_view_search" model="ir.ui.view">
+            <field name="name">hobex.terminal.search</field>
+            <field name="model">hobex.terminal</field>
+            <field name="arch" type="xml">
+                <search string="hobex Terminals">
+                    <field name="tid"/>
+                    <field name="merchant_name"/>
+                    <field name="city"/>
+                    <field name="pos_payment_method_id"/>
+                    <filter name="filter_hobex_active" string="Active at hobex"
+                            domain="[('hobex_active', '=', True)]"/>
+                    <group>
+                        <filter name="groupby_payment_method" string="Payment Method"
+                                domain="[]" context="{'group_by': 'pos_payment_method_id'}"/>
+                        <filter name="groupby_terminal_type" string="Terminal Type"
+                                domain="[]" context="{'group_by': 'terminal_type'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="hobex_terminal_action" model="ir.actions.act_window">
+            <field name="name">hobex Terminals</field>
+            <field name="res_model">hobex.terminal</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="hobex_terminal_view_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">No terminals loaded yet</p>
+                <p>Terminals are not created here, they are loaded from hobex: Point of Sale / Configuration / Payment Methods, open the hobex method and click Check Connection.</p>
+            </field>
+        </record>
+
+        <menuitem id="menu_hobex_terminal"
+                  parent="point_of_sale.menu_point_config_product"
+                  action="hobex_terminal_action"
+                  sequence="4"
+                  groups="point_of_sale.group_pos_manager"/>
+
+    </data>
+</odoo>

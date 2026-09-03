@@ -20,6 +20,13 @@ class HobexTransaction(models.Model):
     transaction_date = fields.Datetime('Transaction Date', default=lambda self: fields.Datetime.now())
     pos_payment_method_id = fields.Many2one('pos.payment.method', string="Payment method", required=True)
     transaction_type = fields.Integer('Transaction Type', default=1)
+    # Which hobex endpoint this record was sent to. 'refund' is a standalone
+    # credit (Gutschrift) with no link to an earlier transaction, as opposed to
+    # the reversal (VOID) that cancels one — see hobex_reversal_transaction().
+    kind = fields.Selection([
+        ('payment', 'Payment'),
+        ('refund', 'Refund'),
+    ], default='payment', required=True, string="Kind")
     amount = fields.Float('Amount')
     currency = fields.Char('Currency', default='EUR')
     tid = fields.Char('TID', help="Terminal ID", required=True)
@@ -41,6 +48,14 @@ class HobexTransaction(models.Model):
         'TransactionID must be unique per TID!',
     )
 
+    @staticmethod
+    def _hobex_error_message(response):
+        """Pull the human readable `message` out of a hobex error body."""
+        try:
+            return json.loads(response.text).get('message') or response.text
+        except (ValueError, AttributeError):
+            return response.text
+
     @api.model
     def _update_transaction_with_hobex_result(self, tid, transaction_id, response):
         with self.env.registry.cursor() as cr:
@@ -51,8 +66,32 @@ class HobexTransaction(models.Model):
             ], limit=1)
 
             if response.status_code == 400:
-                # 400 = Bad Request - Should not happen any time
-                raise UserError(response.text)
+                # 400 = Bad Request. Reachable for refunds, where hobex
+                # validates tid -> currency -> amount and answers e.g.
+                # {"message": "Invalid Amount."}. Surface just the message.
+                raise UserError(self._hobex_error_message(response))
+            elif response.status_code == 403:
+                # 403 = the account is not cleared for this operation. The
+                # refund (Gutschrift) function in particular has to be enabled
+                # by hobex per account (profile flag `canRefund`). Return a
+                # structured result instead of raising so the POS can show a
+                # message the cashier can act on.
+                message = self._hobex_error_message(response)
+                _logger.info(
+                    "hobex refused transaction %s/%s with 403: %s",
+                    tid, transaction_id, message,
+                )
+                transaction.update({
+                    'state': 'failed',
+                    'message': message,
+                    'response': response.text,
+                })
+                env.cr.commit()
+                return {
+                    'responseCode': '-403',
+                    'responseText': message,
+                    'hobex_forbidden': True,
+                }
             elif response.status_code == 404 and transaction.state == 'pending':
                 # 404 = Transaction is not found on hobex side - but our state is pending - so it is failed
                 transaction.state = 'failed'
@@ -63,7 +102,16 @@ class HobexTransaction(models.Model):
                 return
             elif response.status_code == 200:
                 res = json.loads(response.text)
-                if res['responseCode'] == "0" and res['cvm'] == 1:
+                # .get(): the signature receipt is a property of the card
+                # verification method, and not every hobex response carries a
+                # `cvm` key. A missing key must not blow up the whole call —
+                # it just means there is no receipt to fetch.
+                # cvm is a number on the transaction endpoints (1 = signature)
+                # and a string on Transaction Status V2 ("SIGNATURE"), so both
+                # spellings have to count - otherwise the signature receipt is
+                # silently skipped whenever the result arrives over the status
+                # poll instead of the original request.
+                if res.get('responseCode') == "0" and res.get('cvm') in (1, 'SIGNATURE'):
                     # We do fetch the receipt from hobex - and include it in the response
                     receipt_url = urljoin(transaction.pos_payment_method_id.hobex_api_address, "/api/transaction/download")
                     receipt_result = requests.get(
@@ -107,35 +155,49 @@ class HobexTransaction(models.Model):
                 # END TEMP TEST
                 # ============================================================
 
-                if res['responseCode'] == "0":
-                    # responseCode == "0" means the hobex API accepted the request;
-                    # the human-readable responseText tells us the resulting state.
-                    # Unknown values are treated as 'ok' (success with extra info)
-                    # rather than crashing — the raw response is kept in `response`
-                    # for forensics.
+                response_code = res.get('responseCode')
+                if response_code is None:
+                    # Transaction Status V2 answers with responseCode = null
+                    # while the transaction is still running on the terminal
+                    # (spec 1.13, "Transaction Status V2"). Marking that as
+                    # failed would tell the cashier the payment died while the
+                    # customer is still holding the card - and invite a second
+                    # charge. Leave it pending; the caller polls again.
+                    transaction.update({
+                        'response': response.text,
+                        'state': 'pending',
+                    })
+                elif response_code == "0":
+                    # responseCode == "0" means the hobex API accepted the
+                    # request. Status V2 states the outcome in its own `state`
+                    # field, the transaction endpoints only in responseText.
+                    # Unknown values are treated as 'ok' (success with extra
+                    # info) rather than crashing — the raw response is kept in
+                    # `response` for forensics.
                     response_text = res.get('responseText')
+                    raw_state = (res.get('state') or response_text or '').upper()
                     state_map = {
                         'OK': 'ok',
                         'VOID': 'refunded',
                         'INPROGRESS': 'pending',
                     }
-                    state = state_map.get(response_text, 'ok')
-                    if response_text not in state_map:
+                    state = state_map.get(raw_state, 'ok')
+                    if raw_state not in state_map:
                         _logger.warning(
-                            "Unknown hobex responseText %r on transaction %s/%s; "
+                            "Unknown hobex state %r on transaction %s/%s; "
                             "treating as 'ok'. Full response: %s",
-                            response_text, tid, transaction_id, response.text,
+                            raw_state, tid, transaction_id, response.text,
                         )
                     transaction.update({
-                        'response_code': res['responseCode'],
-                        'response_text': response_text,
+                        'response_code': response_code,
+                        'response_text': response_text or res.get('statusText'),
                         'response': response.text,
                         'state': state,
                     })
                 else:
                     transaction.update({
-                        'response_code': res['responseCode'],
-                        'response_text': res['responseText'],
+                        'response_code': response_code,
+                        'response_text': res.get('responseText') or res.get('statusText'),
                         'response': response.text,
                         'state': 'failed',
                     })

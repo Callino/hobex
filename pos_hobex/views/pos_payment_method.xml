@@ -47,20 +47,10 @@
                                      style="max-width: 200px; height: auto;"/>
                             </picture>
                             <div class="d-flex flex-wrap gap-2" groups="base.group_erp_manager">
-                                <!-- Single auth button: clicking it both checks credentials
-                                     and (re-)fetches a fresh token, so a separate "Renew"
-                                     action is redundant. Visible at all times. -->
-                                <button name="hobex_get_auth_token" type="object"
-                                        class="btn btn-primary">
-                                    <i class="fa fa-handshake-o me-1" aria-hidden="true"/>
-                                    Check Connection
-                                </button>
-                                <button name="hobex_sample_transaction" type="object"
-                                        class="btn btn-secondary"
-                                        invisible="hobex_auth_token == False">
-                                    <i class="fa fa-credit-card me-1" aria-hidden="true"/>
-                                    Sample Transaction
-                                </button>
+                                <!-- Only the portal link lives in the header. The action
+                                     buttons sit inside the setup step they belong to, so
+                                     the form reads top to bottom: credentials -> connect
+                                     -> load terminals -> pick one. -->
                                 <!-- External link to the hobex portal. Two <a> tags
                                      toggled by terminal_mode so the user always lands
                                      on the dashboard that matches the configured
@@ -84,17 +74,126 @@
                             </div>
                         </div>
 
-                        <!-- Authentication fields. Now full-width parent so the
-                             default two-column rendering looks natural. -->
-                        <group string="hobex Authentication" colspan="2">
+                        <!-- Step 1 - credentials. Nothing else can be done before
+                             hobex hands out a token, so this comes first and the
+                             "Check Connection" button sits right next to it. -->
+                        <group string="1. Credentials" colspan="2">
                             <group>
                                 <field name="hobex_terminal_mode"/>
-                                <field name="hobex_terminal_id"/>
+                                <field name="hobex_user" groups="base.group_erp_manager"/>
+                                <field name="hobex_pass" password="True" groups="base.group_erp_manager"/>
                                 <field name="hobex_api_address" groups="base.group_no_one"/>
                             </group>
                             <group>
-                                <field name="hobex_user" groups="base.group_erp_manager"/>
-                                <field name="hobex_pass" password="True" groups="base.group_erp_manager"/>
+                                <div colspan="2" groups="base.group_erp_manager">
+                                    <button name="hobex_get_auth_token" type="object"
+                                            class="btn btn-primary">
+                                        <i class="fa fa-handshake-o me-1" aria-hidden="true"/>
+                                        Check Connection
+                                    </button>
+                                    <div class="alert alert-info mt-3 mb-0" role="alert"
+                                         invisible="hobex_connected">
+                                        <i class="fa fa-info-circle me-2" aria-hidden="true"/>
+                                        <span>Enter user and password, then click Check Connection. The terminals of this account are loaded right away.</span>
+                                    </div>
+                                    <div class="alert alert-success mt-3 mb-0" role="alert"
+                                         invisible="not hobex_connected">
+                                        <i class="fa fa-check me-2" aria-hidden="true"/>
+                                        <span>Connected to hobex.</span>
+                                    </div>
+                                </div>
+                            </group>
+                        </group>
+
+                        <!-- Step 2 - terminal. Only reachable once a token exists;
+                             "Load Terminals" fills hobex_terminal_ids, the picker
+                             writes the chosen TID into hobex_terminal_id via onchange.
+                             hobex_terminal_id remains the single value every API call
+                             reads, and stays editable for as long as no terminal is
+                             picked - an account that never loads the list can still
+                             type the TID by hand. -->
+                        <group string="2. Terminal" colspan="2">
+                            <group>
+                                <field name="hobex_terminal_ref_id"
+                                       domain="[('id', 'in', hobex_terminal_ids)]"
+                                       options="{'no_create': True, 'no_open': True}"
+                                       invisible="not hobex_terminal_ids"/>
+                                <!-- Two occurrences on purpose. As long as no terminal
+                                     is picked, the TID has to be typed by hand, so it
+                                     is a normal editable field. Once the picker filled
+                                     it in, it is derived data that only clutters the
+                                     form - hidden for everyone, still readable in
+                                     developer mode where the raw value matters. -->
+                                <field name="hobex_terminal_id"
+                                       invisible="hobex_terminal_ref_id != False"/>
+                                <field name="hobex_terminal_id" readonly="1"
+                                       groups="base.group_no_one"
+                                       invisible="hobex_terminal_ref_id == False"/>
+                            </group>
+                            <group>
+                                <div colspan="2" groups="base.group_erp_manager">
+                                    <!-- Same method, two labels: the first fetch is a
+                                         "load", every later one only refreshes a list
+                                         that is already on screen. -->
+                                    <button name="hobex_load_terminals" type="object"
+                                            class="btn btn-secondary"
+                                            invisible="not hobex_connected or hobex_terminal_ids"
+                                            title="Fetch the terminals of this hobex account">
+                                        <i class="fa fa-download me-1" aria-hidden="true"/>
+                                        Load Terminals
+                                    </button>
+                                    <button name="hobex_load_terminals" type="object"
+                                            class="btn btn-secondary"
+                                            invisible="not hobex_connected or not hobex_terminal_ids"
+                                            title="Fetch the terminals of this hobex account again">
+                                        <i class="fa fa-refresh me-1" aria-hidden="true"/>
+                                        Refresh Terminals
+                                    </button>
+                                    <button name="hobex_sample_transaction" type="object"
+                                            class="btn btn-secondary ms-2"
+                                            invisible="hobex_terminal_id == False"
+                                            title="Send a 0.01 EUR test transaction to the terminal">
+                                        <i class="fa fa-credit-card me-1" aria-hidden="true"/>
+                                        Sample Transaction
+                                    </button>
+                                    <div class="alert alert-info mt-3 mb-0" role="alert"
+                                         invisible="hobex_connected">
+                                        <i class="fa fa-info-circle me-2" aria-hidden="true"/>
+                                        <span>Terminals can only be loaded once the connection has been checked in step 1. Until then the Terminal ID can also be entered by hand.</span>
+                                    </div>
+                                    <div class="alert alert-warning mt-3 mb-0" role="alert"
+                                         invisible="hobex_terminal_id != False or not hobex_connected">
+                                        <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"/>
+                                        <span>No terminal selected yet. Pick one above, the Terminal ID is filled in automatically.</span>
+                                    </div>
+                                </div>
+                            </group>
+                            <!-- Raw mirror of what hobex reports. The picker above is
+                                 what the admin works with, so this stays out of the way
+                                 unless developer mode is on. -->
+                            <field name="hobex_terminal_ids" nolabel="1" colspan="2"
+                                   readonly="1" groups="base.group_no_one"
+                                   invisible="not hobex_terminal_ids"/>
+                        </group>
+
+                        <!-- Account capabilities as reported by
+                             GET /api/account/profile. Refreshed on every
+                             "Check Connection" and by the daily cron. Purely
+                             informational: the refund itself relies on the
+                             403 hobex returns when it is not enabled. -->
+                        <group string="hobex Account" colspan="2"
+                               invisible="hobex_connected == False">
+                            <group>
+                                <field name="hobex_merchant_name"/>
+                                <field name="hobex_can_refund" widget="boolean_toggle" readonly="1"/>
+                                <field name="hobex_can_void" widget="boolean_toggle" readonly="1"/>
+                            </group>
+                            <group>
+                                <div class="alert alert-info mb-0" role="alert"
+                                     invisible="hobex_can_refund">
+                                    <i class="fa fa-info-circle me-2" aria-hidden="true"/>
+                                    <span>The refund function is not enabled for this hobex account. Refunds at the point of sale will be rejected by hobex until they activate it.</span>
+                                </div>
                             </group>
                         </group>
 
@@ -103,6 +202,7 @@
                             <field name="hobex_transaction_ids" nolabel="1" colspan="2">
                                 <list>
                                     <field name="state"/>
+                                    <field name="kind"/>
                                     <field name="transaction_date"/>
                                     <field name="reference"/>
                                     <field name="response_code"/>
@@ -110,9 +210,14 @@
                                     <field name="amount"/>
                                     <field name="currency"/>
                                     <button name="update_hobex_state" type="object"
-                                            string="Hobex Status" icon="fa-refresh"/>
+                                            string="hobex Status" icon="fa-refresh"/>
+                                    <!-- Reversal hits /api/transaction/payment/<tid>/<id>,
+                                         which only knows sale transactions. Hiding it on
+                                         credits keeps a successful Gutschrift from being
+                                         flipped to 'failed' by hobex' 404. -->
                                     <button name="reversal_hobex_transaction" type="object"
-                                            string="Hobex Rückbuchen" icon="fa-undo"/>
+                                            string="Reverse at hobex" icon="fa-undo"
+                                            invisible="kind == 'refund'"/>
                                 </list>
                             </field>
                         </group>

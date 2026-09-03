@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'hobex Payment Terminal',
-    'summary': 'Akzeptiere Karten- und kontaktlose Zahlungen direkt an der '
-               'Odoo-Kasse über hobex Zahlungsterminals.',
+    'summary': 'Accept card and contactless payments directly in the Odoo '
+               'Point of Sale through hobex payment terminals.',
     'description': """
 hobex Payment Terminal Integration for Odoo POS
 ================================================
@@ -28,9 +28,32 @@ Key features
 * **Synchronous transactions** with status polling: a payment that times out
   in the browser can be reconciled when the cashier returns to the order –
   no double charges.
-* **Reversals & refunds** straight from Odoo. ``Storno`` flips the linked
-  ``pos.payment.hobex.transaction`` record to ``refunded`` so the audit trail
-  on the payment method form stays consistent.
+* **Reversals & credits** straight from Odoo, kept apart because hobex
+  treats them differently:
+
+  * ``Storno`` (VOID) cancels the original transaction and flips the linked
+    ``pos.payment.hobex.transaction`` record to ``refunded``, so the audit
+    trail on the payment method form stays consistent. Only possible until
+    hobex closes the batch.
+  * ``Gutschrift`` (refund) books an independent credit over
+    ``/api/transaction/refund``. It needs no reference to the original sale
+    and therefore still works after the end of day. A POS refund order simply
+    takes this route: a negative payment line is booked as a credit.
+
+  hobex enables the credit function per account. The payment method form shows
+  the flag from ``/api/account/profile``, and if hobex refuses a credit with
+  HTTP 403 the cashier gets a message saying the function has to be enabled
+  instead of a generic error.
+* **Transaction abort** from the POS. ``Cancel`` on a waiting payment line
+  sends the abort command (TID + transaction ID) to hobex. The payment request
+  that is still open is not interrupted — hobex answers it with responseCode
+  8004, and that response is what releases the line, so the POS never gets out
+  of step with the terminal.
+* **Terminal selection** – ``Check Connection`` already pulls ``GET /api/terminals``
+  and offers the account's terminals as a dropdown next to the Terminal ID, so the
+  TID no longer has to be typed by hand (``Refresh Terminals`` repeats the call
+  later on). The plain ``Terminal ID`` field stays the value every API call uses,
+  so nothing changes for setups that keep entering it manually.
 * **Signature receipts** are fetched from hobex automatically when the card
   required CVM = signature, and printed via the IoT printer if one is
   connected.
@@ -52,10 +75,10 @@ See ``README.rst`` for the step-by-step installation guide. In short:
 2. Open *Point of Sale → Configuration → Payment Methods → Create*.
 3. Click the *Hobex* card in the provider grid (or set
    *Integration = Terminal* and *Zahlungsterminal = Hobex* manually).
-4. Fill in Terminal ID, hobex user and password, choose Test- or
-   Production-Mode and click *Check Connection*.
+4. Fill in hobex user and password, choose Test- or Production-Mode and click
+   *Check Connection*, then pick the terminal from the list it loaded.
 """,
-    'version': '19.0.1.0.1',
+    'version': '19.0.1.2.0',
     'category': 'Point of Sale',
     'sequence': 6,
     'website': 'https://github.com/Callino/hobex',
@@ -64,6 +87,7 @@ See ``README.rst`` for the step-by-step installation guide. In short:
     'depends': ['point_of_sale'],
     'data': [
         'security/ir.model.access.csv',
+        'views/hobex_terminal.xml',
         'views/pos_payment_method.xml',
         'views/pos_payment.xml',
         'views/res_config_settings_views.xml',

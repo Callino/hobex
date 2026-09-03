@@ -6,11 +6,11 @@
             <span class="pos-receipt-right-align"><t t-out="line.hobex_tid"/></span>
         </div>
         <div t-if="line.hobex_receipt">
-            <span class="pos-receipt-left-align">Beleg#</span>
+            <span class="pos-receipt-left-align">Receipt#</span>
             <span class="pos-receipt-right-align"><t t-out="line.hobex_receipt"/></span>
         </div>
         <div t-if="line.hobex_cardIssuer">
-            <span class="pos-receipt-left-align">Karte</span>
+            <span class="pos-receipt-left-align">Card</span>
             <span class="pos-receipt-right-align"><t t-out="line.hobex_cardIssuer"/></span>
         </div>
         <div t-if="line.hobex_cardNumber">
@@ -19,16 +19,16 @@
         </div>
         <div style="width:100%;border-bottom:1px dotted;"/>
         <div t-if="line.hobex_transactionType == 'SELL'">
-            <span class="pos-receipt-left-align">KAUF</span>
+            <span class="pos-receipt-left-align">PURCHASE</span>
             <span class="pos-receipt-right-align"><t t-out="formatCurrency(line.amount)"/></span>
         </div>
         <div t-if="line.hobex_transactionType == 'VOID'">
-            <span class="pos-receipt-left-align">STORNO</span>
+            <span class="pos-receipt-left-align">VOID</span>
             <span class="pos-receipt-right-align"><t t-out="formatCurrency(line.amount)"/></span>
         </div>
         <div style="width:100%;border-bottom:1px dotted;"/>
         <div t-if="line.hobex_approvalCode">
-            <span class="pos-receipt-left-align">Autorisierungscode</span>
+            <span class="pos-receipt-left-align">Approval code</span>
             <span class="pos-receipt-right-align"><t t-out="line.hobex_approvalCode"/></span>
         </div>
         <div t-if="line.hobex_aid">
@@ -44,7 +44,7 @@
             <span class="pos-receipt-right-align"><t t-out="line.hobex_actionCode"/></span>
         </div>
         <t t-if="line.hobex_cvm == 1">
-            <div style="text-align:center;">Unterschrift</div>
+            <div style="text-align:center;">Signature</div>
             <div style="width:100%;border-bottom:1px dotted;"/>
             <div style="text-align:center;height:2cm;"></div>
         </t>
