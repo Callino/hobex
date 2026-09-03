@@ -1,4 +1,4 @@
-/* hobex payment api */
+/* Hobex payment api */
 import { _t } from "@web/core/l10n/translation";
 import { PaymentInterface } from "@point_of_sale/app/payment/payment_interface";
 import { register_payment_method } from "@point_of_sale/app/store/pos_store";
@@ -37,7 +37,7 @@ export class PaymentHobex extends PaymentInterface {
 
     print_hobex_receipt(receipt) {
         // Convert *any* line terminator (CRLF, LF, or bare CR) to <br/> so a
-        // hobex receipt returned with Unix line endings still prints with
+        // Hobex receipt returned with Unix line endings still prints with
         // line breaks instead of one squashed line.
         const body = receipt.replace(/\r\n|\r|\n/g, "<br/>");
         const htmlString =
@@ -72,30 +72,30 @@ export class PaymentHobex extends PaymentInterface {
         } else {
             line.set_payment_status("retry");
             if (response.hobex_forbidden) {
-                // HTTP 403 from hobex: the account is not cleared for this
+                // HTTP 403 from Hobex: the account is not cleared for this
                 // operation. In practice this is the refund (Gutschrift)
-                // function, which hobex enables per account.
+                // function, which Hobex enables per account.
                 this.pos.env.bus.trigger("hobex_error", {
-                    title: _t("hobex refund not enabled"),
+                    title: _t("Hobex refund not enabled"),
                     body: _t(
-                        "The refund function is not enabled for this hobex account. Please ask hobex to activate it."
+                        "The refund function is not enabled for this Hobex account. Please ask Hobex to activate it."
                     ),
                 });
             } else if (response.responseCode === "8004") {
                 this.pos.env.bus.trigger("hobex_error", {
-                    title: _t("hobex"),
+                    title: _t("Hobex"),
                     body: _t("The transaction was aborted at the terminal."),
                 });
             } else if (response.responseCode === "8003") {
                 this.pos.env.bus.trigger("hobex_error", {
-                    title: _t("hobex device error"),
+                    title: _t("Hobex device error"),
                     body: _t(
                         "The terminal does not seem to be reachable. Please check that it is connected to the network and try again."
                     ),
                 });
             } else {
                 this.pos.env.bus.trigger("hobex_error", {
-                    title: _t("hobex response"),
+                    title: _t("Hobex response"),
                     body: response.responseCode + ": " + response.responseText,
                 });
             }
@@ -107,8 +107,8 @@ export class PaymentHobex extends PaymentInterface {
         // Network failure or odoo exception
         line.set_payment_status("retry");
         this.pos.env.bus.trigger("hobex_error", {
-            title: _t("hobex error"),
-            body: _t("A communication error with the Odoo / hobex server occurred."),
+            title: _t("Hobex error"),
+            body: _t("A communication error with the Odoo / Hobex server occurred."),
         });
         resolve(false);
     }
@@ -121,7 +121,7 @@ export class PaymentHobex extends PaymentInterface {
         const order = this.pos.get_order();
         const line = order.payment_ids.find((paymentLine) => paymentLine.uuid === uuid);
         // A negative payment line is a refund order: book a standalone credit
-        // (Gutschrift) via /api/transaction/refund. hobex needs no reference to
+        // (Gutschrift) via /api/transaction/refund. Hobex needs no reference to
         // the original sale for that, but it does want a positive amount — the
         // sign stays in the Odoo payment line.
         const isRefund = line.amount < 0;
@@ -143,7 +143,7 @@ export class PaymentHobex extends PaymentInterface {
                 line.set_payment_status("waitingCard");
                 line.transaction_id = Date.now();
                 const data = {
-                    // Absolute value first: hobex wants a positive amount on
+                    // Absolute value first: Hobex wants a positive amount on
                     // a refund, and Math.round() breaks ties towards
                     // +Infinity, so rounding the negative value first would be
                     // off by one step on an exact half.
@@ -178,7 +178,7 @@ export class PaymentHobex extends PaymentInterface {
      * We therefore resolve with `false` on success: PaymentScreen puts the line
      * back to 'waitingCard' on a falsy result, which is exactly right — the
      * line keeps waiting for the pending response instead of being freed for
-     * deletion while hobex is still talking to the terminal.
+     * deletion while Hobex is still talking to the terminal.
      *
      * @override
      */
@@ -197,19 +197,19 @@ export class PaymentHobex extends PaymentInterface {
             .then((response) => {
                 // silentCall resolves with `false` when the server call failed.
                 if (!response || response.error) {
-                    // hobex explains why it refused (device unreachable, unknown
+                    // Hobex explains why it refused (device unreachable, unknown
                     // transaction, ...). Passing that through is the difference
                     // between "try again" and "walk over to the terminal", so
                     // show it instead of swallowing it.
                     this.pos.env.bus.trigger("hobex_error", {
-                        title: _t("hobex abort failed"),
+                        title: _t("Hobex abort failed"),
                         body: response?.message
                             ? _t(
-                                  "The abort could not be sent to hobex: %s Please cancel the payment directly on the terminal.",
+                                  "The abort could not be sent to Hobex: %s Please cancel the payment directly on the terminal.",
                                   response.message
                               )
                             : _t(
-                                  "The abort could not be sent to hobex. Please cancel the payment directly on the terminal."
+                                  "The abort could not be sent to Hobex. Please cancel the payment directly on the terminal."
                               ),
                     });
                 }
@@ -231,8 +231,8 @@ export class PaymentHobex extends PaymentInterface {
         // would surface as an "Uncaught (in promise)" warning since we have
         // no further `.catch` downstream.
         this.pos.env.bus.trigger("hobex_error", {
-            title: _t("hobex error"),
-            body: _t(data && data.message ? data.message : "A communication error with the Odoo / hobex server occurred."),
+            title: _t("Hobex error"),
+            body: _t(data && data.message ? data.message : "A communication error with the Odoo / Hobex server occurred."),
         });
         line.set_payment_status("retry");
         resolve(false);
@@ -243,8 +243,8 @@ export class PaymentHobex extends PaymentInterface {
         // connection error instead of crashing on response.error.
         if (!response) {
             this.pos.env.bus.trigger("hobex_error", {
-                title: _t("hobex error"),
-                body: _t("A communication error with the Odoo / hobex server occurred."),
+                title: _t("Hobex error"),
+                body: _t("A communication error with the Odoo / Hobex server occurred."),
             });
             line.set_payment_status("retry");
             resolve(false);
@@ -303,8 +303,8 @@ export class PaymentHobex extends PaymentInterface {
         // connection error instead of crashing on response.responseCode.
         if (!response) {
             this.pos.env.bus.trigger("hobex_error", {
-                title: _t("hobex error"),
-                body: _t("A communication error with the Odoo / hobex server occurred."),
+                title: _t("Hobex error"),
+                body: _t("A communication error with the Odoo / Hobex server occurred."),
             });
             line.set_payment_status("done");
             resolve(false);
@@ -317,7 +317,7 @@ export class PaymentHobex extends PaymentInterface {
             resolve(true);
         } else {
             this.pos.env.bus.trigger("hobex_error", {
-                title: _t("hobex response"),
+                title: _t("Hobex response"),
                 body: _t(response.responseCode + ": " + response.responseText),
             });
             resolve(false);

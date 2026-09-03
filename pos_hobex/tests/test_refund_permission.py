@@ -69,6 +69,8 @@ class TestHobexRefundPermission(TransactionCase):
             'payment_method_id': self.method.id,
             'amount': 1.0,
         })
+        # Pinned to en_US: the message is translated, and the database this
+        # runs in may well have a German user language.
         with patch(PROFILE_PATH, return_value={'canRefund': False}):
             with self.assertRaisesRegex(UserError, 'not enabled'):
-                payment.hobex_refund()
+                payment.with_context(lang='en_US').hobex_refund()

@@ -45,7 +45,7 @@ patch(TicketScreen.prototype, {
                 "Every line of this order has already been refunded, so there is nothing left to refund."
             );
             // The reversal hint only holds for an order actually paid on a
-            // hobex terminal. This patch itself is payment-method agnostic:
+            // Hobex terminal. This patch itself is payment-method agnostic:
             // it runs on every order once the module is installed, so the
             // hobex-specific half has to be gated.
             if (this._hasHobexCardPayment(order)) {
@@ -81,7 +81,7 @@ patch(TicketScreen.prototype, {
     },
 
     /**
-     * True when the order carries a settled payment on a hobex terminal.
+     * True when the order carries a settled payment on a Hobex terminal.
      *
      * @param {object} order the order selected in the ticket screen
      * @returns {boolean}

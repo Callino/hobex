@@ -6,7 +6,7 @@
         <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <!--
-            Inject a hobex row at the end of the "Payment Terminals" block on
+            Inject a Hobex row at the end of the "Payment Terminals" block on
             the POS settings page. The same pattern as Adyen / Stripe / Tyro /
             etc.: a `module_pos_*` boolean toggles install/uninstall.
             (The arrow button that opens the matching payment method straight
@@ -15,9 +15,9 @@
             -->
             <xpath expr="//block[@id='pos_payment_terminals_section']" position="inside">
                 <setting id="hobex_payment_terminal_setting"
-                         title="The transactions are processed by hobex. Set your hobex credentials on the related payment method."
-                         string="hobex"
-                         help="Accept payments with a hobex payment terminal">
+                         title="The transactions are processed by Hobex. Set your Hobex credentials on the related payment method."
+                         string="Hobex"
+                         help="Accept payments with a Hobex payment terminal">
                     <field name="module_pos_hobex"/>
                 </setting>
             </xpath>

@@ -2,7 +2,7 @@
 <templates id="template" xml:space="preserve">
 
     <!--
-    Hide the "Force done" buttons on hobex payment lines.  The button is
+    Hide the "Force done" buttons on Hobex payment lines.  The button is
     rendered in three branches of PaymentScreenPaymentLines depending on
     line.payment_status:
       * 'force_done'                            (connection error)
@@ -29,8 +29,8 @@
             <attribute name="t-if">line.payment_method_id.use_payment_terminal != 'hobex'</attribute>
         </xpath>
 
-        <!-- Status text of the waiting branch: while a hobex abort is on its way,
-             say what that means. hobex acknowledging the command does not make the
+        <!-- Status text of the waiting branch: while a Hobex abort is on its way,
+             say what that means. Hobex acknowledging the command does not make the
              terminal stop - terminals in pinpad mode ignore it and run into their own
              timeout - so the cashier has to know that the gesture may have to be
              repeated on the device. The note is added below the running status, next
@@ -46,7 +46,7 @@
             </div>
         </xpath>
 
-        <!-- 3. waiting/waitingCancel/waitingCapture branch — keep original status check, combine with hobex check -->
+        <!-- 3. waiting/waitingCancel/waitingCapture branch — keep original status check, combine with Hobex check -->
         <xpath expr="//t[contains(@t-elif, 'includes(line.payment_status)')]//div[hasclass('send_force_done') and @title='Force Done']" position="attributes">
             <attribute name="t-if">line.payment_status == 'waiting' and line.payment_method_id.use_payment_terminal != 'hobex'</attribute>
         </xpath>

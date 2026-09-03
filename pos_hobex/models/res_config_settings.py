@@ -11,7 +11,7 @@ class ResConfigSettings(models.TransientModel):
     # POS → Configuration → Settings → Payment Terminals, alongside Adyen,
     # Stripe, etc.
     module_pos_hobex = fields.Boolean(
-        string="hobex Payment Terminal",
-        help="The transactions are processed by hobex. "
-             "Set your hobex credentials on the related payment method.",
+        string="Hobex Payment Terminal",
+        help="The transactions are processed by Hobex. "
+             "Set your Hobex credentials on the related payment method.",
     )

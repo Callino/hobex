@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="pos_payment_hobex_transaction_view_list" model="ir.ui.view">
+            <field name="name">pos.payment.hobex.transaction.list</field>
+            <field name="model">pos.payment.hobex.transaction</field>
+            <field name="arch" type="xml">
+                <list string="Hobex Transactions" create="false"
+                      decoration-danger="state == 'failed'"
+                      decoration-muted="state == 'refunded'"
+                      decoration-info="state == 'pending'">
+                    <field name="transaction_date"/>
+                    <field name="state"/>
+                    <field name="kind"/>
+                    <field name="reference"/>
+                    <field name="transaction_id" optional="hide"/>
+                    <field name="tid" optional="hide"/>
+                    <field name="response_code"/>
+                    <field name="response_text"/>
+                    <field name="amount" sum="Total"/>
+                    <field name="currency"/>
+                    <field name="pos_payment_method_id" optional="hide"/>
+                    <button name="update_hobex_state" type="object"
+                            string="Hobex Status" icon="fa-refresh"/>
+                    <!-- Reversal hits /api/transaction/payment/<tid>/<id>, which only
+                         knows sale transactions. Hiding it on credits keeps a
+                         successful Gutschrift from being flipped to 'failed' by
+                         Hobex' 404. -->
+                    <button name="reversal_hobex_transaction" type="object"
+                            string="Reverse at Hobex" icon="fa-undo"
+                            invisible="kind == 'refund'"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="pos_payment_hobex_transaction_view_form" model="ir.ui.view">
+            <field name="name">pos.payment.hobex.transaction.form</field>
+            <field name="model">pos.payment.hobex.transaction</field>
+            <field name="arch" type="xml">
+                <form string="Hobex Transaction" create="false" edit="false">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="reference"/>
+                            <h1><field name="reference" readonly="1"/></h1>
+                        </div>
+                        <group>
+                            <group string="Transaction">
+                                <field name="state" readonly="1"/>
+                                <field name="kind" readonly="1"/>
+                                <field name="transaction_date" readonly="1"/>
+                                <field name="amount" readonly="1"/>
+                                <field name="currency" readonly="1"/>
+                            </group>
+                            <group string="Hobex">
+                                <field name="tid" readonly="1"/>
+                                <field name="transaction_id" readonly="1"/>
+                                <field name="response_code" readonly="1"/>
+                                <field name="response_text" readonly="1"/>
+                                <field name="pos_payment_method_id" readonly="1"/>
+                            </group>
+                        </group>
+                        <group string="Raw response" groups="base.group_no_one">
+                            <field name="url" readonly="1"/>
+                            <field name="message" readonly="1"/>
+                            <field name="response" nolabel="1" colspan="2" readonly="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="pos_payment_hobex_transaction_view_search" model="ir.ui.view">
+            <field name="name">pos.payment.hobex.transaction.search</field>
+            <field name="model">pos.payment.hobex.transaction</field>
+            <field name="arch" type="xml">
+                <search string="Hobex Transactions">
+                    <field name="reference"/>
+                    <field name="transaction_id"/>
+                    <field name="tid"/>
+                    <field name="response_code"/>
+                    <filter name="filter_failed" string="Failed"
+                            domain="[('state', '=', 'failed')]"/>
+                    <filter name="filter_pending" string="Pending"
+                            domain="[('state', '=', 'pending')]"/>
+                    <filter name="filter_refund" string="Refunds"
+                            domain="[('kind', '=', 'refund')]"/>
+                    <group>
+                        <filter name="groupby_state" string="State"
+                                domain="[]" context="{'group_by': 'state'}"/>
+                        <filter name="groupby_kind" string="Kind"
+                                domain="[]" context="{'group_by': 'kind'}"/>
+                        <filter name="groupby_date" string="Transaction Date"
+                                domain="[]" context="{'group_by': 'transaction_date'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+    </data>
+</odoo>

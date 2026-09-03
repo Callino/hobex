@@ -10,7 +10,7 @@ class HobexTerminal(models.Model):
     with different credentials legitimately see different terminals.
     """
     _name = 'hobex.terminal'
-    _description = 'hobex Terminal'
+    _description = 'Hobex Terminal'
     _order = 'tid'
 
     pos_payment_method_id = fields.Many2one(
@@ -22,9 +22,9 @@ class HobexTerminal(models.Model):
     terminal_type = fields.Char('Terminal Type')
     vu = fields.Char('VU Number')
     city = fields.Char('City')
-    # `active` is reserved by Odoo for the archive mechanism, so the flag hobex
+    # `active` is reserved by Odoo for the archive mechanism, so the flag Hobex
     # reports gets its own name instead of silently turning records invisible.
-    hobex_active = fields.Boolean('Active at hobex')
+    hobex_active = fields.Boolean('Active at Hobex')
 
     _sql_constraints = [
         ('tid_method_uniq', 'unique(tid, pos_payment_method_id)',

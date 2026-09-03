@@ -3,7 +3,7 @@
     <data>
 
         <record id="pos_payment_method_view_form_hobex" model="ir.ui.view">
-            <field name="name">hobex Payment Method Erweiterung</field>
+            <field name="name">Hobex Payment Method Erweiterung</field>
             <field name="model">pos.payment.method</field>
             <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_form"/>
             <field name="arch" type="xml">
@@ -14,6 +14,25 @@
                 shoehorned into the right-hand column next to
                 use_payment_terminal.
                 -->
+                <!-- The transaction log is a list of its own, not a block at the
+                     bottom of the configuration form: a stat button keeps the form
+                     about setting the method up and still leads to the records in
+                     one click. -->
+                <!-- 19.0 wraps the title in a flex div and anchors on that
+                     wrapper; on 18.0 the parent of oe_title is the <sheet>
+                     itself, so anchoring there would drop the button box out
+                     of the sheet. Insert before the title instead. -->
+                <xpath expr="//div[hasclass('oe_title')]" position="before">
+                    <div class="oe_button_box" name="button_box"
+                         invisible="use_payment_terminal != 'hobex'">
+                        <button name="action_view_hobex_transactions" type="object"
+                                class="oe_stat_button" icon="fa-exchange">
+                            <field name="hobex_transaction_count" widget="statinfo"
+                                   string="Transactions"/>
+                        </button>
+                    </div>
+                </xpath>
+
                 <xpath expr="//group[@name='Payment methods']" position="after">
                     <group name="hobex" invisible="use_payment_terminal != 'hobex'">
 
@@ -30,7 +49,7 @@
                             <span>Attention, there are active POS sessions based on this payment journal!</span>
                         </div>
 
-                        <!-- Header row: hobex logo on the left, action buttons on the right.
+                        <!-- Header row: Hobex logo on the left, action buttons on the right.
                              Logo is constrained to a sensible max width; buttons carry the
                              icon as a child <i> so the button text doesn't get clobbered
                              by FontAwesome class styling on the button element itself.
@@ -43,7 +62,7 @@
                                 <source srcset="/pos_hobex/static/src/img/hobex_logo_dark.png"
                                         media="(prefers-color-scheme: dark)"/>
                                 <img src="/pos_hobex/static/src/img/hobex_logo_light.png"
-                                     alt="hobex Logo"
+                                     alt="Hobex Logo"
                                      style="max-width: 200px; height: auto;"/>
                             </picture>
                             <div class="d-flex flex-wrap gap-2" groups="base.group_erp_manager">
@@ -51,7 +70,7 @@
                                      buttons sit inside the setup step they belong to, so
                                      the form reads top to bottom: credentials -> connect
                                      -> load terminals -> pick one. -->
-                                <!-- External link to the hobex portal. Two <a> tags
+                                <!-- External link to the Hobex portal. Two <a> tags
                                      toggled by terminal_mode so the user always lands
                                      on the dashboard that matches the configured
                                      environment (test vs. production). -->
@@ -59,23 +78,23 @@
                                    target="_blank" rel="noopener noreferrer"
                                    role="button" class="btn btn-link"
                                    invisible="hobex_terminal_mode != 'testing'"
-                                   title="hobex Test Portal">
+                                   title="Hobex Test Portal">
                                     <i class="fa fa-external-link me-1" aria-hidden="true"/>
-                                    hobex Dashboard
+                                    Hobex Dashboard
                                 </a>
                                 <a href="https://online.hobex.at/login"
                                    target="_blank" rel="noopener noreferrer"
                                    role="button" class="btn btn-link"
                                    invisible="hobex_terminal_mode != 'production'"
-                                   title="hobex Online Portal">
+                                   title="Hobex Online Portal">
                                     <i class="fa fa-external-link me-1" aria-hidden="true"/>
-                                    hobex Dashboard
+                                    Hobex Dashboard
                                 </a>
                             </div>
                         </div>
 
                         <!-- Step 1 - credentials. Nothing else can be done before
-                             hobex hands out a token, so this comes first and the
+                             Hobex hands out a token, so this comes first and the
                              "Check Connection" button sits right next to it. -->
                         <group string="1. Credentials" colspan="2">
                             <group>
@@ -99,7 +118,7 @@
                                     <div class="alert alert-success mt-3 mb-0" role="alert"
                                          invisible="not hobex_connected">
                                         <i class="fa fa-check me-2" aria-hidden="true"/>
-                                        <span>Connected to hobex.</span>
+                                        <span>Connected to Hobex.</span>
                                     </div>
                                 </div>
                             </group>
@@ -133,7 +152,7 @@
                                 <div colspan="2" class="alert alert-warning mb-0" role="alert"
                                      invisible="hobex_terminal_ref_id == False or hobex_terminal_active">
                                     <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"/>
-                                    <span>hobex reports this terminal as inactive. Payments sent to it come back as a device error.</span>
+                                    <span>Hobex reports this terminal as inactive. Payments sent to it come back as a device error.</span>
                                 </div>
                             </group>
                             <group>
@@ -144,14 +163,14 @@
                                     <button name="hobex_load_terminals" type="object"
                                             class="btn btn-secondary"
                                             invisible="not hobex_connected or hobex_terminal_ids"
-                                            title="Fetch the terminals of this hobex account">
+                                            title="Fetch the terminals of this Hobex account">
                                         <i class="fa fa-download me-1" aria-hidden="true"/>
                                         Load Terminals
                                     </button>
                                     <button name="hobex_load_terminals" type="object"
                                             class="btn btn-secondary"
                                             invisible="not hobex_connected or not hobex_terminal_ids"
-                                            title="Fetch the terminals of this hobex account again">
+                                            title="Fetch the terminals of this Hobex account again">
                                         <i class="fa fa-refresh me-1" aria-hidden="true"/>
                                         Refresh Terminals
                                     </button>
@@ -174,7 +193,7 @@
                                     </div>
                                 </div>
                             </group>
-                            <!-- Raw mirror of what hobex reports. The picker above is
+                            <!-- Raw mirror of what Hobex reports. The picker above is
                                  what the admin works with, so this stays out of the way
                                  unless developer mode is on. -->
                             <field name="hobex_terminal_ids" nolabel="1" colspan="2"
@@ -186,8 +205,8 @@
                              GET /api/account/profile. Refreshed on every
                              "Check Connection" and by the daily cron. Purely
                              informational: the refund itself relies on the
-                             403 hobex returns when it is not enabled. -->
-                        <group string="hobex Account" colspan="2"
+                             403 Hobex returns when it is not enabled. -->
+                        <group string="Hobex Account" colspan="2"
                                invisible="hobex_connected == False">
                             <group>
                                 <field name="hobex_can_refund" widget="boolean_toggle" readonly="1"/>
@@ -198,34 +217,10 @@
                             <div colspan="2" class="alert alert-info mb-0" role="alert"
                                  invisible="hobex_can_refund">
                                 <i class="fa fa-info-circle me-2" aria-hidden="true"/>
-                                <span>The refund function is not enabled for this hobex account. Refunds at the point of sale will be rejected by hobex until they activate it.</span>
+                                <span>The refund function is not enabled for this Hobex account. Refunds at the point of sale will be rejected by Hobex until they activate it.</span>
                             </div>
                         </group>
 
-                        <!-- Transactions list spans both columns. -->
-                        <group string="Transactions" colspan="2">
-                            <field name="hobex_transaction_ids" nolabel="1" colspan="2">
-                                <list>
-                                    <field name="state"/>
-                                    <field name="kind"/>
-                                    <field name="transaction_date"/>
-                                    <field name="reference"/>
-                                    <field name="response_code"/>
-                                    <field name="response_text"/>
-                                    <field name="amount"/>
-                                    <field name="currency"/>
-                                    <button name="update_hobex_state" type="object"
-                                            string="hobex Status" icon="fa-refresh"/>
-                                    <!-- Reversal hits /api/transaction/payment/<tid>/<id>,
-                                         which only knows sale transactions. Hiding it on
-                                         credits keeps a successful Gutschrift from being
-                                         flipped to 'failed' by hobex' 404. -->
-                                    <button name="reversal_hobex_transaction" type="object"
-                                            string="Reverse at hobex" icon="fa-undo"
-                                            invisible="kind == 'refund'"/>
-                                </list>
-                            </field>
-                        </group>
                     </group>
                 </xpath>
 

@@ -5,8 +5,8 @@ import { useBus } from "@web/core/utils/hooks";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { onMounted } from "@odoo/owl";
 
-// Extend PaymentScreen to display hobex error messages and to handle
-// deletion of hobex payment lines that have already triggered a transaction.
+// Extend PaymentScreen to display Hobex error messages and to handle
+// deletion of Hobex payment lines that have already triggered a transaction.
 patch(PaymentScreen.prototype, {
     setup() {
         super.setup(...arguments);
@@ -28,13 +28,13 @@ patch(PaymentScreen.prototype, {
         });
     },
     /**
-     * Keep a hobex line on "cancelling" until hobex reports the outcome.
+     * Keep a Hobex line on "cancelling" until Hobex reports the outcome.
      *
      * Core sets the line back to 'waitingCard' whenever send_payment_cancel
      * resolves falsy (payment_screen.js), and our terminal deliberately does
-     * resolve falsy: the abort only asks hobex to stop the terminal, the
+     * resolve falsy: the abort only asks Hobex to stop the terminal, the
      * still-open payment request is what reports the result (8004) and frees
-     * the line. Between those two moments hobex can take half a minute, and
+     * the line. Between those two moments Hobex can take half a minute, and
      * the cashier would stare at an unchanged "waiting for card" line - so
      * leave it on 'waitingCancel', which renders as "Request sent" with a
      * spinner and keeps the Force cancel escape hatch available.
@@ -100,7 +100,7 @@ patch(PaymentScreen.prototype, {
             line.hobex_responseCode
         ) {
             this.env.services.dialog.add(AlertDialog, {
-                title: _t("hobex response"),
+                title: _t("Hobex response"),
                 body: "Code: " + line.hobex_responseCode + "\n" + line.hobex_responseText,
             });
         } else if (
@@ -108,7 +108,7 @@ patch(PaymentScreen.prototype, {
             line.transaction_id
         ) {
             // The line is still in flight. Deleting it here would orphan a
-            // transaction that hobex may still complete, so point the cashier
+            // transaction that Hobex may still complete, so point the cashier
             // at the Cancel button, which sends the abort command.
             this.env.services.dialog.add(AlertDialog, {
                 title: _t("Attention"),

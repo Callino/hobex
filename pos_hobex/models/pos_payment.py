@@ -12,26 +12,26 @@ _logger = logging.getLogger(__name__)
 class PosPayment(models.Model):
     _inherit = 'pos.payment'
 
-    hobex_receipt = fields.Char('hobex Receipt Number')
-    hobex_approvalCode = fields.Char('hobex Approval Code')
-    hobex_actionCode = fields.Char('hobex Crypto Code')
-    hobex_aid = fields.Char('hobex Aid')
-    hobex_reference = fields.Char('hobex Ref Number')
-    hobex_tid = fields.Char('hobex TID')
-    hobex_transactionId = fields.Char('hobex Transaction ID')
-    hobex_transactionDate = fields.Char('hobex Transaction Date')
-    hobex_cardNumber = fields.Char('hobex Card Number')
-    hobex_cardExpiry = fields.Char('hobex Card Expiry')
-    hobex_brand = fields.Char('hobex Card Brand')
-    hobex_cardIssuer = fields.Char('hobex Card Issuer')
-    hobex_transactionType = fields.Char('hobex Transaction Type')
-    hobex_responseCode = fields.Char('hobex Response Code')
-    hobex_responseText = fields.Char('hobex Response Text')
-    hobex_cvm = fields.Char('hobex CVM')
+    hobex_receipt = fields.Char('Hobex Receipt Number')
+    hobex_approvalCode = fields.Char('Hobex Approval Code')
+    hobex_actionCode = fields.Char('Hobex Crypto Code')
+    hobex_aid = fields.Char('Hobex Aid')
+    hobex_reference = fields.Char('Hobex Ref Number')
+    hobex_tid = fields.Char('Hobex TID')
+    hobex_transactionId = fields.Char('Hobex Transaction ID')
+    hobex_transactionDate = fields.Char('Hobex Transaction Date')
+    hobex_cardNumber = fields.Char('Hobex Card Number')
+    hobex_cardExpiry = fields.Char('Hobex Card Expiry')
+    hobex_brand = fields.Char('Hobex Card Brand')
+    hobex_cardIssuer = fields.Char('Hobex Card Issuer')
+    hobex_transactionType = fields.Char('Hobex Transaction Type')
+    hobex_responseCode = fields.Char('Hobex Response Code')
+    hobex_responseText = fields.Char('Hobex Response Text')
+    hobex_cvm = fields.Char('Hobex CVM')
     # Set when a standalone credit (Gutschrift) was booked for this payment,
     # so the button can't be pressed twice and the audit record stays linked.
     hobex_refund_transaction_id = fields.Many2one(
-        'pos.payment.hobex.transaction', string='hobex Refund Transaction',
+        'pos.payment.hobex.transaction', string='Hobex Refund Transaction',
         readonly=True, ondelete='set null',
         help="The credit (Gutschrift) booked on the terminal for this payment.")
 
@@ -48,18 +48,18 @@ class PosPayment(models.Model):
         """Book a standalone credit (Gutschrift) for this payment.
 
         This is NOT the reversal in hobex_reversal(): a reversal (VOID) cancels
-        the original transaction and is only possible until hobex closes the
-        batch. A credit is an independent transaction — hobex needs no
+        the original transaction and is only possible until Hobex closes the
+        batch. A credit is an independent transaction — Hobex needs no
         reference to the original sale, which makes it the fallback once the
         end of day has run.
 
-        Like every hobex transaction this one is synchronous: the customer has
+        Like every Hobex transaction this one is synchronous: the customer has
         to present their card on the terminal while the request is open.
         """
         self.ensure_one()
         method_sudo = self.payment_method_id.sudo()
         if method_sudo.use_payment_terminal != 'hobex':
-            raise UserError(_('This payment was not made through a hobex terminal.'))
+            raise UserError(_('This payment was not made through a Hobex terminal.'))
         if self.hobex_refund_transaction_id:
             raise UserError(_('A credit was already booked for this payment on %s.')
                             % self.hobex_refund_transaction_id.transaction_date)
@@ -69,7 +69,7 @@ class PosPayment(models.Model):
         if not method_sudo._hobex_refund_allowed():
             raise UserError(_(
                 'The refund (Gutschrift) function is not enabled for this '
-                'hobex account. Please ask hobex to activate it.'
+                'Hobex account. Please ask Hobex to activate it.'
             ))
 
         # hobex_auth_token is restricted to base.group_erp_manager; sudo so
@@ -101,11 +101,11 @@ class PosPayment(models.Model):
             if res and res.get('hobex_forbidden'):
                 raise UserError(_(
                     'The refund (Gutschrift) function is not enabled for this '
-                    'hobex account. Please ask hobex to activate it.'
+                    'Hobex account. Please ask Hobex to activate it.'
                 ))
-            raise UserError(_('hobex refund failed: %(code)s %(text)s') % {
+            raise UserError(_('Hobex refund failed: %(code)s %(text)s') % {
                 'code': (res or {}).get('responseCode') or '',
-                'text': (res or {}).get('responseText') or _('no response from hobex'),
+                'text': (res or {}).get('responseText') or _('no response from Hobex'),
             })
 
         self.hobex_refund_transaction_id = transaction
@@ -113,7 +113,7 @@ class PosPayment(models.Model):
         # sudo() would be the superuser instead of the cashier at the screen.
         return self.payment_method_id._hobex_notify(
             'success',
-            _('hobex credit booked'),
+            _('Hobex credit booked'),
             _('%(amount)s %(currency)s were credited on terminal %(tid)s.') % {
                 'amount': amount,
                 'currency': self.currency_id.name,
@@ -122,10 +122,10 @@ class PosPayment(models.Model):
         )
 
     def hobex_reversal(self):
-        """Reverse (VOID) the original transaction on the hobex side.
+        """Reverse (VOID) the original transaction on the Hobex side.
 
         The counterpart is hobex_refund(): a reversal cancels *this*
-        transaction and only works until hobex closes the batch, a refund is
+        transaction and only works until Hobex closes the batch, a refund is
         an independent credit that also works afterwards.
         """
         self.ensure_one()
@@ -144,7 +144,7 @@ class PosPayment(models.Model):
         # That helper already calls `_update_transaction_with_hobex_result`,
         # which is the single place that flips the linked
         # pos.payment.hobex.transaction record's state to 'refunded' on a
-        # successful VOID. The previous implementation talked to hobex
+        # successful VOID. The previous implementation talked to Hobex
         # directly and updated only the pos.payment row, leaving the
         # transaction audit record stuck at state='ok' — which made the
         # "Transactions" list on the payment method form lie.
@@ -154,11 +154,11 @@ class PosPayment(models.Model):
             # hobex_reversal_transaction swallows requests exceptions and
             # returns (None, None). The real cause is in the server log.
             _logger.warning(
-                "hobex reversal: no response from hobex for payment %s (tid=%s, transactionId=%s)",
+                "Hobex reversal: no response from Hobex for payment %s (tid=%s, transactionId=%s)",
                 payment.id, payment.hobex_tid, payment.hobex_transactionId,
             )
             raise UserError(_(
-                'There was a communication error with hobex. '
+                'There was a communication error with Hobex. '
                 'See the server log for details.'
             ))
 
@@ -167,9 +167,9 @@ class PosPayment(models.Model):
                 message = json.loads(response.text).get('message') or response.text
             except (ValueError, AttributeError):
                 message = response.text
-            raise UserError(_('hobex reversal failed: %s') % message)
+            raise UserError(_('Hobex reversal failed: %s') % message)
 
-        # Mirror the hobex response onto the pos.payment record so the
+        # Mirror the Hobex response onto the pos.payment record so the
         # invoice / accounting view reflects the refund.
         if res:
             payment.hobex_responseText = res.get('responseText') or payment.hobex_responseText

@@ -4,7 +4,7 @@ import { patch } from "@web/core/utils/patch";
 // The receipt template does not see the pos.payment records themselves: the
 // order builds `props.data.paymentlines` from export_for_printing(), which in
 // core returns nothing but amount / name / ticket. Everything
-// pos_hobex.HobexDetails prints has to be added here, or the hobex block on
+// pos_hobex.HobexDetails prints has to be added here, or the Hobex block on
 // the receipt stays empty.
 //
 // (In 19.0 the receipt reads the payment records directly and this patch is
@@ -12,7 +12,7 @@ import { patch } from "@web/core/utils/patch";
 patch(PosPayment.prototype, {
     export_for_printing() {
         const data = super.export_for_printing(...arguments);
-        // The key the receipt tests to decide whether to print a hobex block.
+        // The key the receipt tests to decide whether to print a Hobex block.
         data.hobex_transactionId = this.hobex_transactionId;
         // The values printed inside pos_hobex.HobexDetails.
         data.hobex_tid = this.hobex_tid;

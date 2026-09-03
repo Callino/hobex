@@ -12,7 +12,7 @@
             <field name="name">hobex.terminal.list</field>
             <field name="model">hobex.terminal</field>
             <field name="arch" type="xml">
-                <list string="hobex Terminals" create="false" edit="false"
+                <list string="Hobex Terminals" create="false" edit="false"
                       decoration-muted="not hobex_active">
                     <field name="tid"/>
                     <field name="merchant_name"/>
@@ -30,7 +30,7 @@
             <field name="name">hobex.terminal.form</field>
             <field name="model">hobex.terminal</field>
             <field name="arch" type="xml">
-                <form string="hobex Terminal" create="false" edit="false">
+                <form string="Hobex Terminal" create="false" edit="false">
                     <sheet>
                         <div class="oe_title">
                             <label for="tid"/>
@@ -38,10 +38,10 @@
                         </div>
                         <div class="alert alert-info" role="alert">
                             <i class="fa fa-info-circle me-2" aria-hidden="true"/>
-                            <span>This data comes from hobex and is overwritten every time the terminals are loaded.</span>
+                            <span>This data comes from Hobex and is overwritten every time the terminals are loaded.</span>
                         </div>
                         <group>
-                            <group string="hobex">
+                            <group string="Hobex">
                                 <field name="merchant_name" readonly="1"/>
                                 <field name="company_name" readonly="1"/>
                                 <field name="vu" readonly="1"/>
@@ -62,12 +62,12 @@
             <field name="name">hobex.terminal.search</field>
             <field name="model">hobex.terminal</field>
             <field name="arch" type="xml">
-                <search string="hobex Terminals">
+                <search string="Hobex Terminals">
                     <field name="tid"/>
                     <field name="merchant_name"/>
                     <field name="city"/>
                     <field name="pos_payment_method_id"/>
-                    <filter name="filter_hobex_active" string="Active at hobex"
+                    <filter name="filter_hobex_active" string="Active at Hobex"
                             domain="[('hobex_active', '=', True)]"/>
                     <group>
                         <filter name="groupby_payment_method" string="Payment Method"
@@ -80,13 +80,13 @@
         </record>
 
         <record id="hobex_terminal_action" model="ir.actions.act_window">
-            <field name="name">hobex Terminals</field>
+            <field name="name">Hobex Terminals</field>
             <field name="res_model">hobex.terminal</field>
             <field name="view_mode">list,form</field>
             <field name="search_view_id" ref="hobex_terminal_view_search"/>
             <field name="help" type="html">
                 <p class="o_view_nocontent_smiling_face">No terminals loaded yet</p>
-                <p>Terminals are not created here, they are loaded from hobex: Point of Sale / Configuration / Payment Methods, open the hobex method and click Check Connection.</p>
+                <p>Terminals are not created here, they are loaded from Hobex: Point of Sale / Configuration / Payment Methods, open the Hobex method and click Check Connection.</p>
             </field>
         </record>
 
