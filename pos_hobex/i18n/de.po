@@ -435,6 +435,11 @@ msgid "hobex renew auth"
 msgstr "hobex Authentifizierung erneuern"
 
 #. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
+msgid "hobex reports this terminal as inactive. Payments sent to it come back as a device error."
+msgstr "hobex meldet dieses Terminal als inaktiv. Zahlungen an dieses Terminal kommen als Gerätefehler zurück."
+
+#. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
 msgid "hobex request failed: %s"
@@ -595,11 +600,6 @@ msgstr "Terminals laden"
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_merchant_name
 msgid "Merchant"
 msgstr "Händler"
-
-#. module: pos_hobex
-#: model:ir.model.fields,help:pos_hobex.field_pos_payment_method__hobex_merchant_name
-msgid "Merchant name hobex reports for the configured Terminal ID."
-msgstr "Händlername, den hobex für die konfigurierte Terminal-ID meldet."
 
 #. module: pos_hobex
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__message
@@ -836,6 +836,11 @@ msgid "Terminal"
 msgstr "Terminal"
 
 #. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_terminal_active
+msgid "Terminal active at hobex"
+msgstr "Terminal bei hobex aktiv"
+
+#. module: pos_hobex
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_api_address
 msgid "Terminal Address"
 msgstr "Terminal-Adresse"
@@ -1064,3 +1069,4 @@ msgstr "STORNO"
 #: model:ir.model.fields,field_description:pos_hobex.field_hobex_terminal__vu
 msgid "VU Number"
 msgstr "VU-Nummer"
+

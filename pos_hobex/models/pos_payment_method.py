@@ -71,9 +71,6 @@ class PosPaymentMethod(models.Model):
     hobex_can_void = fields.Boolean('Reversals enabled', readonly=True,
                                     help="hobex has enabled the reversal (Storno) "
                                          "function for this account.")
-    hobex_merchant_name = fields.Char('Merchant', readonly=True,
-                                      help="Merchant name hobex reports for the "
-                                           "configured Terminal ID.")
     # Terminals available to this account, filled by hobex_load_terminals().
     # hobex_terminal_id stays the single source of truth for every API call —
     # the Many2one is only the picker that writes into it, so an account that
@@ -84,6 +81,11 @@ class PosPaymentMethod(models.Model):
                                             ondelete='set null',
                                             help="Pick one of the terminals hobex reports "
                                                  "for this account to fill in the Terminal ID.")
+    # Mirrors the flag from the picked terminal so the form can warn about a
+    # terminal hobex reports as inactive - a payment against it would only
+    # come back as a device error.
+    hobex_terminal_active = fields.Boolean(related='hobex_terminal_ref_id.hobex_active',
+                                           string="Terminal active at hobex")
     hobex_transaction_ids = fields.One2many('pos.payment.hobex.transaction', 'pos_payment_method_id', string="Transactions", readonly=True)
     active_pos_session_ids = fields.Many2many('pos.session', string="Active POS Sessions", compute='_compute_active_pos_sessions')
 
@@ -372,15 +374,9 @@ class PosPaymentMethod(models.Model):
                 _logger.info("hobex: could not refresh capabilities for method %s",
                              method.id, exc_info=True)
                 continue
-            terminal = next(
-                (t for t in profile.get('terminals') or []
-                 if t.get('tid') == method.hobex_terminal_id),
-                {},
-            )
             method.update({
                 'hobex_can_refund': bool(profile.get('canRefund')),
                 'hobex_can_void': bool(profile.get('canVoid')),
-                'hobex_merchant_name': terminal.get('merchantName') or False,
             })
 
     def hobex_sample_transaction(self):
