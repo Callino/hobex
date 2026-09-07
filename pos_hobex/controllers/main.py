@@ -35,12 +35,21 @@ class HobexController(Controller):
         res['cvm'] = 1
         res['cvm_receipt'] = 'TEST123123'
         '''
+        if response is None:
+            # No usable answer from hobex (timeout, connection error, ...) - res is our own
+            # result with responseCode -1. The POS will then ask for the transaction state.
+            return Response(json.dumps(res), status=200, headers={'Content-Type': 'application/json'})
         return Response(json.dumps(res), status=response.status_code, headers=dict(response.headers))
 
     @route('/hobex/api/transaction/payment/<int:method_id>/<string:transactionId>', type="http", auth="public", cors='*', csrf=False, methods=['DELETE'])
     def payment_reversal(self, method_id, transactionId):
         payment_method = self._get_payment_method(method_id)
         res, response = payment_method.hobex_reversal_transaction(transactionId)
+        if response is None:
+            # No usable answer from hobex (timeout, connection error) - reversal state unknown
+            return Response(json.dumps({
+                'message': _('No answer from hobex - the state of the reversal is unknown. Please check the transaction in the hobex portal.'),
+            }), status=502, headers={'Content-Type': 'application/json'})
         if res:
             return Response(json.dumps(res), status=response.status_code, headers=dict(response.headers))
         else:

@@ -4,6 +4,9 @@ from urllib.parse import urljoin
 import json
 from odoo.exceptions import UserError
 import time
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class HobexTransaction(models.Model):
@@ -49,37 +52,57 @@ class HobexTransaction(models.Model):
             if response.status_code == 400:
                 # 400 = Bad Request - Should not happen any time
                 raise UserError(response.text)
-            elif response.status_code == 404 and transaction.state == 'pending':
-                # 404 = Transaction is not found on hobex side - but our state is pending - so it is pending
-                return
             elif response.status_code == 404:
-                # 404 = Transaction is not found on hobex side
+                # 404 = Transaction is not found on hobex side - it never reached hobex.
+                # This also applies to a still pending transaction (e.g. after a timeout on
+                # the payment request) - the POS may safely start a new transaction.
                 transaction.state = 'failed'
                 return
             elif response.status_code == 200:
                 res = json.loads(response.text)
-                if res['responseCode'] == "0" and res['cvm'] == 1:
+                if res['responseCode'] == "0" and res.get('cvm') == 1:
                     # We do fetch the receipt from hobex - and include it in the response
                     receipt_url = urljoin(transaction.pos_payment_method_id.hobex_api_address, "/api/transaction/download")
-                    receipt_result = requests.get(
-                        receipt_url,
-                        params={
-                            'tid': tid,
-                            'transactionId': transaction_id,
-                            'width': 32,
-                            'type': 'txt',
-                            'raw': True,
-                        },
-                        timeout=10,
-                        headers=transaction.pos_payment_method_id._get_hobex_headers(),
-                    )
-                    res['cvm_receipt'] = receipt_result.text
+                    try:
+                        receipt_result = requests.get(
+                            receipt_url,
+                            params={
+                                'tid': tid,
+                                'transactionId': transaction_id,
+                                'width': 32,
+                                'type': 'txt',
+                                'raw': True,
+                            },
+                            timeout=10,
+                            headers=transaction.pos_payment_method_id._get_hobex_headers(),
+                        )
+                        res['cvm_receipt'] = receipt_result.text
+                    except Exception as e:
+                        # The payment itself was successful - a missing signature receipt must
+                        # not be reported as a failed payment to the POS
+                        _logger.warning('hobex transaction %s: could not download receipt (%s)', transaction_id, str(e))
                 if res['responseCode'] == "0":
+                    # responseCode "0" means the hobex API accepted the request. The state of the
+                    # transaction itself is given by 'state' (v2 status API - the POS evaluates the
+                    # same field) resp. 'responseText' (payment API):
+                    # OK = paid, VOID = reversed, INPROGRESS = still running on the terminal.
+                    # Unknown values are treated as 'ok' - the raw response is kept for forensics.
+                    hobex_state = res.get('state') or res.get('responseText')
+                    state_map = {
+                        'OK': 'ok',
+                        'VOID': 'refunded',
+                        'INPROGRESS': 'pending',
+                    }
+                    if hobex_state not in state_map:
+                        _logger.warning(
+                            "Unknown hobex state %r on transaction %s/%s; treating as 'ok'. Full response: %s",
+                            hobex_state, tid, transaction_id, response.text,
+                        )
                     transaction.update({
                         'response_code': res['responseCode'],
-                        'response_text': res['responseText'],
+                        'response_text': res.get('responseText'),
                         'response': response.text,
-                        'state': 'ok',
+                        'state': state_map.get(hobex_state, 'ok'),
                     })
                 else:
                     transaction.update({
@@ -118,7 +141,10 @@ class HobexTransaction(models.Model):
                 transaction_id=self.transaction_id,
                 response=response
             )
-            if sync and res['state'] == 'INPROGRESS':
+            if not res:
+                # Transaction is not known on hobex side (404) - nothing to wait for
+                break
+            if sync and res.get('state') == 'INPROGRESS':
                 time.sleep(5)
             else:
                 break

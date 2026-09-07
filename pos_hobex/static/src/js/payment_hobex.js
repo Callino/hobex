@@ -93,7 +93,32 @@ export class PaymentHobex extends PaymentInterface{
             });
         }
         return new Promise((resolve) => {
+            function hobex_check_status() {
+                // There is a transaction_id - but no final answer from hobex for it yet
+                // (e.g. Odoo got a timeout while waiting for the terminal). The payment may
+                // still have been completed at the terminal - so never start a new transaction
+                // here, ask hobex for the state of this one instead.
+                console.log('checking hobex state of transaction ' + line.transaction_id);
+                line.set_payment_status('waiting');
+                $.ajax({
+                    url: "/hobex/api/v2/transactions/" + line.payment_method.id + "/" + line.transaction_id,
+                    type: 'get',
+                    // the server waits for the terminal itself (up to ~60 seconds)
+                    timeout: 120000,
+                }).then(
+                    hobex_status_done,
+                    hobex_failure
+                );
+            }
             function hobex_done(result) {
+                if (result.responseCode === "-1") {
+                    // Odoo got no usable answer from hobex (timeout, connection error) - the
+                    // outcome is unknown. Do not store -1 as hobex result on the line, the
+                    // transaction is still open - check its state.
+                    console.log('no hobex result: ' + result.responseText);
+                    hobex_check_status();
+                    return;
+                }
                 // Do always set the response Code
                 line['hobex_responseCode'] = result.responseCode;
                 console.log('did set hobex response code ' + result.responseCode);
@@ -121,7 +146,13 @@ export class PaymentHobex extends PaymentInterface{
             function hobex_status_done(result) {
                 // Do always set the response Code
                 if (result.state === "INPROGRESS") {
+                    // Still running on the terminal - keep the transaction_id, the next
+                    // "Send" will check the state again
                     line.set_payment_status('waitingCard');
+                    self.pos.env.bus.trigger('hobex_error', {
+                        'title': _t('hobex'),
+                        'body': _t('Die Zahlung ist am Terminal noch in Bearbeitung. Bitte am Terminal abschließen und danach erneut "Senden" drücken.'),
+                    });
                     resolve(false);
                 } else {
                     line['hobex_responseCode'] = result.responseCode;
@@ -134,6 +165,10 @@ export class PaymentHobex extends PaymentInterface{
                     } else {
                         // Payment was not successful - so set the status to retry
                         line.set_payment_status('retry');
+                        self.pos.env.bus.trigger('hobex_error', {
+                            'title': _t('hobex Antwort'),
+                            'body': result['responseCode'] + ': ' + result['responseText'],
+                        });
                         // Allow to start a new transaction
                         line.transaction_id = null;
                         resolve(false);
@@ -155,26 +190,35 @@ export class PaymentHobex extends PaymentInterface{
                         'body': _t('Odoo System ist nicht erreichbar.'),
                     });
                     // We do not resolv here - because we do not have a final answer to our request
+                } else if (response.status === 404) {
+                    // hobex does not know this transaction - it never reached hobex, so it is
+                    // safe to start a new one with the next "Send"
+                    line.transaction_id = null;
+                    self.pos.env.bus.trigger('hobex_error', {
+                        'title': _t('hobex'),
+                        'body': _t('Die Transaktion ist bei hobex nicht bekannt. Bitte erneut "Senden" drücken um eine neue Zahlung zu starten.'),
+                    });
+                    resolve(false);
                 } else if (response.responseJSON) {
                     self.pos.env.bus.trigger('hobex_error', {
                         'title': _t('hobex Antwort'),
-                        'body': _t(response.responseJSON.message),
+                        'body': _t(response.responseJSON.responseText || response.responseJSON.message || JSON.stringify(response.responseJSON)),
                     });
                     resolve(false);
                 } else {
                     self.pos.env.bus.trigger('hobex_error', {
-                        'title': _t(response.statusText),
-                        'body': _t(response.responseText),
+                        'title': _t('Fehler'),
+                        'body': _t('Kommunikationsfehler mit dem Odoo Server (HTTP %s). Bitte erneut "Senden" drücken um den Status der Zahlung abzufragen.', response.status),
                     });
                     resolve(false);
                 }
             }
             // Check if we do have already a transaction_id here - if we do already have an answer from hobex side
-            if ((line.transaction_id) && ("hobex_responseCode" in line) && (line.hobex_responseCode != "0")) {
+            if (line.transaction_id && line.hobex_responseCode && line.hobex_responseCode !== "0") {
                 // There is already a hobex result - but not successful - set lets try with a new transaction
                 console.log('do reset transaction id to null');
                 line.transaction_id = null;
-            } else if ((line.transaction_id) && ("hobex_responseCode" in line) && (line.hobex_responseCode === "0")) {
+            } else if (line.transaction_id && line.hobex_responseCode === "0") {
                 // Transaction was already successful - so do resolve true
                 line.set_payment_status('done');
                 resolve(true);
@@ -183,15 +227,7 @@ export class PaymentHobex extends PaymentInterface{
             if (line.transaction_id) {
                 // There is already a transaction_id - but no responseCode from Hobex
                 // So Update the transaction state from the server
-                line.set_payment_status('waiting');
-                $.ajax({
-                    url: "/hobex/api/v2/transactions/" + line.payment_method.id + "/" + line.transaction_id,
-                    type: 'get',
-                    timeout: 20000,
-                }).then(
-                    hobex_status_done,
-                    hobex_failure
-                );
+                hobex_check_status();
             } else {
                 // No transaction_id - so start a new one
                 console.log("Starting new transaction");
@@ -272,11 +308,19 @@ export class PaymentHobex extends PaymentInterface{
                     }
                 },
                 function failure(response) {
+                    if (response.status === 404) {
+                        // hobex does not know this transaction - allow to start a new one
+                        line.transaction_id = null;
+                        line.set_payment_status('retry');
+                    } else {
+                        line.set_payment_status('waiting');
+                    }
                     self.pos.env.bus.trigger('hobex_error', {
                         'title': _t('hobex Fehler'),
-                        'body': _t(response.responseJSON.message),
+                        'body': (response.responseJSON && (response.responseJSON.responseText || response.responseJSON.message))
+                            || response.responseText
+                            || _t('Kommunikationsfehler mit dem Odoo Server (HTTP %s).', response.status),
                     });
-                    line.set_payment_status('waiting');
                     resolve(false);
                 }
             );
@@ -311,7 +355,9 @@ export class PaymentHobex extends PaymentInterface{
                 function failure(response) {
                     self.pos.env.bus.trigger('hobex_error', {
                         'title': _t('hobex Fehler'),
-                        'body': _t(response.responseJSON.message),
+                        'body': (response.responseJSON && response.responseJSON.message)
+                            || response.responseText
+                            || _t('Kommunikationsfehler mit dem Odoo Server (HTTP %s).', response.status),
                     });
                     resolve(false);
                 }
