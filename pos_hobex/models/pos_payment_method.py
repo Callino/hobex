@@ -144,13 +144,12 @@ class PosPaymentMethod(models.Model):
         # The old cursor does not have this record!
         with self.env.registry.cursor() as cr:
             env = api.Environment(cr, self.env.user.id, self.env.context)
+            transaction = env['pos.payment.hobex.transaction'].sudo().search([
+                ('tid', '=', self.hobex_terminal_id),
+                ('transaction_id', '=', transaction_id),
+            ], limit=1)
             try:
-                transaction = env['pos.payment.hobex.transaction'].sudo().search([
-                    ('tid', '=', self.hobex_terminal_id),
-                    ('transaction_id', '=', transaction_id),
-                ], limit=1)
-                env.cr.commit()
-                # Do use Timeout of 60 seconds - otherwise the transaction will be aborted
+                # Do use Timeout of 80 seconds - otherwise the transaction will be aborted
                 # Because most Odoo Instances will run with 120 seconds timeout - if we also use 120 seconds timeout we will get a problem
                 _logger.debug("Start Hobex Sync Transaction: %s", transaction_id)
                 response = requests.post(
@@ -178,15 +177,25 @@ class PosPaymentMethod(models.Model):
                 )
                 return res, response
             except Exception as e:
+                # No usable answer from hobex (timeout, connection error, unexpected response).
+                # The outcome of the payment is unknown - the customer may still complete it at
+                # the terminal - so the transaction stays pending and its real state has to be
+                # fetched afterwards via update_hobex_state() (the POS does this automatically).
+                # Never guess a final state here: a wrong 'failed' leads to double charges.
+                if isinstance(e, requests.exceptions.Timeout):
+                    message = _('No answer from hobex within 80 seconds.')
+                elif isinstance(e, requests.exceptions.ConnectionError):
+                    message = _('hobex server not reachable: %s') % (str(e),)
+                else:
+                    message = str(e)
                 transaction.update({
-                    'state': 'failed',
-                    'message': str(e),
+                    'message': message,
                 })
-                _logger.info('hobex Exception: %s', str(e))
+                _logger.warning('hobex transaction %s: no result (%s)', transaction_id, str(e))
                 return {
                     'responseCode': '-1',
-                    'responseText': str(e),
-                }, response or None
+                    'responseText': message,
+                }, None
 
     def hobex_reversal_transaction(self, transactionId):
         self.ensure_one()
@@ -207,7 +216,9 @@ class PosPaymentMethod(models.Model):
             )
             return res, response
         except Exception as e:
-            _logger.info('hobex Exception: %s', str(e))
+            # No usable answer from hobex - the state of the reversal is unknown
+            _logger.warning('hobex reversal of transaction %s: no result (%s)', transactionId, str(e))
+            return None, None
 
     def _check_required_if_hobex(self):
         """ If the field has 'required_if_terminal="hobex"' attribute, then it is required"""
@@ -232,17 +243,30 @@ class PosPaymentMethod(models.Model):
         if not transaction:
             return {
                 'error': True,
+                'code': 'not_found',
                 'message': 'Transaktion nicht gefunden',
             }
-        res, response = transaction.update_hobex_state(sync=True)
+        try:
+            res, response = transaction.update_hobex_state(sync=True)
+        except Exception as e:
+            # hobex not reachable - the state of the transaction is still unknown, the POS
+            # must keep the transaction and ask again (never start a new one here)
+            _logger.warning('hobex transaction %s: state request failed (%s)', transaction_id, str(e))
+            return {
+                'error': True,
+                'code': 'no_answer',
+                'message': 'Keine Antwort vom hobex Server - der Status der Zahlung ist unbekannt. Bitte erneut versuchen.',
+            }
         if res:
             return {
                 'error': False,
                 'res': res,
             }
         else:
+            # 404 on hobex side - the transaction never reached hobex, a new one may be started
             return {
                 'error': True,
+                'code': 'not_found',
                 'message': 'Hobex Transaktion nicht gefunden',
             }
 
