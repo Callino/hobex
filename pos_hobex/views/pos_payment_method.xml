@@ -2,70 +2,236 @@
 <odoo>
     <data>
 
-        <!-- Add Open Cashdrawer, and Payment Fields to account.journal Form - it is in the POS Tab -->
         <record id="pos_payment_method_view_form_hobex" model="ir.ui.view">
             <field name="name">Hobex Payment Method Erweiterung</field>
             <field name="model">pos.payment.method</field>
             <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_form"/>
             <field name="arch" type="xml">
 
-                <xpath expr="//field[@name='use_payment_terminal']/../.." position="after">
+                <!--
+                Anchor on the outer 'Payment methods' group so our content
+                sits BELOW it as a full-width block, instead of being
+                shoehorned into the right-hand column next to
+                use_payment_terminal.
+                -->
+                <!-- The transaction log is a list of its own, not a block at the
+                     bottom of the configuration form: a stat button keeps the form
+                     about setting the method up and still leads to the records in
+                     one click. -->
+                <!-- 19.0 wraps the title in a flex div and anchors on that
+                     wrapper; on 17.0 the parent of oe_title is the <sheet>
+                     itself, so anchoring there would drop the button box out
+                     of the sheet. Insert before the title instead. -->
+                <xpath expr="//div[hasclass('oe_title')]" position="before">
+                    <div class="oe_button_box" name="button_box"
+                         invisible="use_payment_terminal != 'hobex'">
+                        <button name="action_view_hobex_transactions" type="object"
+                                class="oe_stat_button" icon="fa-exchange">
+                            <field name="hobex_transaction_count" widget="statinfo"
+                                   string="Transactions"/>
+                        </button>
+                    </div>
+                </xpath>
+
+                <xpath expr="//group[@name='Payment methods']" position="after">
                     <group name="hobex" invisible="use_payment_terminal != 'hobex'">
-                        <div>
-                            <div>
-                                <img src="/pos_hobex/static/src/img/hobex_logo_3.png" alt="Hobex Logo"/>
-                            </div>
-                            <div class="row">
-                                <div class="col-4">
-                                    <button name="get_auth_token" type="object" string="Check Connection" class="btn btn-primary fa fa-handshake-o" invisible="hobex_auth_token != False"/>
-                                </div>
-                                <div class="col-4">
-                                    <button name="renew_auth_token" type="object" string="Renew Auth" class="btn btn-primary fa fa-handshake-o" invisible="hobex_auth_token != False"/>
-                                </div>
-                                <div class="col-4">
-                                    <button name="sample_transaction" type="object" string="Sample Transaction" class="btn btn-primary fa fa-credit-card" invisible="hobex_auth_token == False"/>
-                                </div>
+
+                        <!-- Hidden helpers -->
+                        <field name="hobex_connected" invisible="1"/>
+                        <field name="active_pos_session_ids" invisible="1"/>
+                        <!-- Drives the picker's domain, its invisible, and the
+                             Load / Refresh Terminals buttons. 17.0 refuses a
+                             field used in a modifier whose only occurrence is
+                             restricted to base.group_no_one ("... is restricted
+                             to the group(s) base.group_no_one"), so this one
+                             plain occurrence has to exist. -->
+                        <field name="hobex_terminal_ids" invisible="1"/>
+                        <field name="hobex_auth_token" invisible="1" readonly="1" force_save="1" groups="base.group_erp_manager"/>
+
+                        <!-- Open-session warning, rendered as a real
+                             Bootstrap alert instead of text inside an <i>. -->
+                        <div class="alert alert-warning d-flex align-items-center mb-3" role="alert"
+                             colspan="2" invisible="not active_pos_session_ids">
+                            <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"/>
+                            <span>Attention, there are active POS sessions based on this payment journal!</span>
+                        </div>
+
+                        <!-- Header row: Hobex logo on the left, action buttons on the right.
+                             Logo is constrained to a sensible max width; buttons carry the
+                             icon as a child <i> so the button text doesn't get clobbered
+                             by FontAwesome class styling on the button element itself.
+                             Two logo variants are shipped: the dark-subtitle PNG is used
+                             on light themes, the light-subtitle PNG on dark themes;
+                             prefers-color-scheme picks the right one automatically. -->
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3"
+                             colspan="2">
+                            <picture>
+                                <source srcset="/pos_hobex/static/src/img/hobex_logo_dark.png"
+                                        media="(prefers-color-scheme: dark)"/>
+                                <img src="/pos_hobex/static/src/img/hobex_logo_light.png"
+                                     alt="Hobex Logo"
+                                     style="max-width: 200px; height: auto;"/>
+                            </picture>
+                            <div class="d-flex flex-wrap gap-2" groups="base.group_erp_manager">
+                                <!-- Only the portal link lives in the header. The action
+                                     buttons sit inside the setup step they belong to, so
+                                     the form reads top to bottom: credentials -> connect
+                                     -> load terminals -> pick one. -->
+                                <!-- External link to the Hobex portal. Two <a> tags
+                                     toggled by terminal_mode so the user always lands
+                                     on the dashboard that matches the configured
+                                     environment (test vs. production). -->
+                                <a href="https://hobexplus.brunn.hobex.at/login"
+                                   target="_blank" rel="noopener noreferrer"
+                                   role="button" class="btn btn-link"
+                                   invisible="hobex_terminal_mode != 'testing'"
+                                   title="Hobex Test Portal">
+                                    <i class="fa fa-external-link me-1" aria-hidden="true"/>
+                                    Hobex Dashboard
+                                </a>
+                                <a href="https://online.hobex.at/login"
+                                   target="_blank" rel="noopener noreferrer"
+                                   role="button" class="btn btn-link"
+                                   invisible="hobex_terminal_mode != 'production'"
+                                   title="Hobex Online Portal">
+                                    <i class="fa fa-external-link me-1" aria-hidden="true"/>
+                                    Hobex Dashboard
+                                </a>
                             </div>
                         </div>
-                        <div class="row" invisible="active_pos_session_ids == False">
-                            <div class="col-12">
-                                <i class="fa fa-exclamation-circle" aria-hidden="true">Attention, there are active pos sessions based on this payment journal !</i>
+
+                        <!-- Step 1 - credentials. Nothing else can be done before
+                             Hobex hands out a token, so this comes first and the
+                             "Check Connection" button sits right next to it. -->
+                        <group string="1. Credentials" colspan="2">
+                            <group>
+                                <field name="hobex_terminal_mode"/>
+                                <field name="hobex_user" groups="base.group_erp_manager"/>
+                                <field name="hobex_pass" password="True" groups="base.group_erp_manager"/>
+                                <field name="hobex_api_address" groups="base.group_no_one"/>
+                            </group>
+                            <group>
+                                <div colspan="2" groups="base.group_erp_manager">
+                                    <button name="hobex_get_auth_token" type="object"
+                                            class="btn btn-primary">
+                                        <i class="fa fa-handshake-o me-1" aria-hidden="true"/>
+                                        Check Connection
+                                    </button>
+                                    <div class="alert alert-info mt-3 mb-0" role="alert"
+                                         invisible="hobex_connected">
+                                        <i class="fa fa-info-circle me-2" aria-hidden="true"/>
+                                        <span>Enter user and password, then click Check Connection. The terminals of this account are loaded right away.</span>
+                                    </div>
+                                    <div class="alert alert-success mt-3 mb-0" role="alert"
+                                         invisible="not hobex_connected">
+                                        <i class="fa fa-check me-2" aria-hidden="true"/>
+                                        <span>Connected to Hobex.</span>
+                                    </div>
+                                </div>
+                            </group>
+                        </group>
+
+                        <!-- Step 2 - terminal. Only reachable once a token exists;
+                             "Load Terminals" fills hobex_terminal_ids, the picker
+                             writes the chosen TID into hobex_terminal_id via onchange.
+                             hobex_terminal_id remains the single value every API call
+                             reads, and stays editable for as long as no terminal is
+                             picked - an account that never loads the list can still
+                             type the TID by hand. -->
+                        <group string="2. Terminal" colspan="2">
+                            <group>
+                                <field name="hobex_terminal_ref_id"
+                                       domain="[('id', 'in', hobex_terminal_ids)]"
+                                       options="{'no_create': True, 'no_open': True}"
+                                       invisible="not hobex_terminal_ids"/>
+                                <!-- Two occurrences on purpose. As long as no terminal
+                                     is picked, the TID has to be typed by hand, so it
+                                     is a normal editable field. Once the picker filled
+                                     it in, it is derived data that only clutters the
+                                     form - hidden for everyone, still readable in
+                                     developer mode where the raw value matters. -->
+                                <field name="hobex_terminal_id"
+                                       invisible="hobex_terminal_ref_id != False"/>
+                                <field name="hobex_terminal_id" readonly="1"
+                                       groups="base.group_no_one"
+                                       invisible="hobex_terminal_ref_id == False"/>
+                                <field name="hobex_terminal_active" invisible="1"/>
+                                <div colspan="2" class="alert alert-warning mb-0" role="alert"
+                                     invisible="hobex_terminal_ref_id == False or hobex_terminal_active">
+                                    <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"/>
+                                    <span>Hobex reports this terminal as inactive. Payments sent to it come back as a device error.</span>
+                                </div>
+                            </group>
+                            <group>
+                                <div colspan="2" groups="base.group_erp_manager">
+                                    <!-- Same method, two labels: the first fetch is a
+                                         "load", every later one only refreshes a list
+                                         that is already on screen. -->
+                                    <button name="hobex_load_terminals" type="object"
+                                            class="btn btn-secondary"
+                                            invisible="not hobex_connected or hobex_terminal_ids"
+                                            title="Fetch the terminals of this Hobex account">
+                                        <i class="fa fa-download me-1" aria-hidden="true"/>
+                                        Load Terminals
+                                    </button>
+                                    <button name="hobex_load_terminals" type="object"
+                                            class="btn btn-secondary"
+                                            invisible="not hobex_connected or not hobex_terminal_ids"
+                                            title="Fetch the terminals of this Hobex account again">
+                                        <i class="fa fa-refresh me-1" aria-hidden="true"/>
+                                        Refresh Terminals
+                                    </button>
+                                    <button name="hobex_sample_transaction" type="object"
+                                            class="btn btn-secondary ms-2"
+                                            invisible="hobex_terminal_id == False"
+                                            title="Send a 0.01 EUR test transaction to the terminal">
+                                        <i class="fa fa-credit-card me-1" aria-hidden="true"/>
+                                        Sample Transaction
+                                    </button>
+                                    <div class="alert alert-info mt-3 mb-0" role="alert"
+                                         invisible="hobex_connected">
+                                        <i class="fa fa-info-circle me-2" aria-hidden="true"/>
+                                        <span>Terminals can only be loaded once the connection has been checked in step 1. Until then the Terminal ID can also be entered by hand.</span>
+                                    </div>
+                                    <div class="alert alert-warning mt-3 mb-0" role="alert"
+                                         invisible="hobex_terminal_id != False or not hobex_connected">
+                                        <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"/>
+                                        <span>No terminal selected yet. Pick one above, the Terminal ID is filled in automatically.</span>
+                                    </div>
+                                </div>
+                            </group>
+                            <!-- The raw mirror of what Hobex reports is not repeated
+                                 here: it is the same data as the Hobex Terminals list
+                                 under Point of Sale / Configuration, and a second
+                                 occurrence restricted to base.group_no_one is what
+                                 17.0's view validation rejects (see the hidden helper
+                                 above). -->
+                        </group>
+
+                        <!-- Account capabilities as reported by
+                             GET /api/account/profile. Refreshed on every
+                             "Check Connection" and by the daily cron. Purely
+                             informational: the refund itself relies on the
+                             403 Hobex returns when it is not enabled. -->
+                        <group string="Hobex Account" colspan="2"
+                               invisible="hobex_connected == False">
+                            <group>
+                                <field name="hobex_can_refund" widget="boolean_toggle" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="hobex_can_void" widget="boolean_toggle" readonly="1"/>
+                            </group>
+                            <div colspan="2" class="alert alert-info mb-0" role="alert"
+                                 invisible="hobex_can_refund">
+                                <i class="fa fa-info-circle me-2" aria-hidden="true"/>
+                                <span>The refund function is not enabled for this Hobex account. Refunds at the point of sale will be rejected by Hobex until they activate it.</span>
                             </div>
-                        </div>
-                        <group string="Hobex Authentication">
-                            <field name="hobex_connected" readonly="1" invisible="1"/>
-                            <field name="active_pos_session_ids" invisible="1"/>
-                            <field name="hobex_terminal_mode"/>
-                            <field name="hobex_auth_token" invisible="1" readonly="1" force_save="1"/>
-                            <field name="hobex_api_address" groups="base.group_no_one"/>
-                            <field name="hobex_terminal_id"/>
-                            <field name="hobex_user"/>
-                            <field name="hobex_pass" password="True"/>
                         </group>
-                        <group string="Options">
-                            <field name="auto_validate"/>
-                            <field name="open_cashdrawer"/>
-                        </group>
+
                     </group>
                 </xpath>
 
             </field>
         </record>
-        <!-- Inherit Form View to Modify it -->
-        <!--
-        <record id="view_pos_pos_form" model="ir.ui.view">
-            <field name="name">view_pos_pos_form</field>
-            <field name="model">pos.order</field>
-            <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
-            <field name="arch" type="xml">
-
-                <xpath expr="//field[@name='statement_ids']/tree/field[@name='statement_id']" position="after">
-                    <field name="hobex_transactionId"/>
-                    <field name="hobex_receipt"/>
-                </xpath>
-
-            </field>
-        </record>
-        -->
     </data>
 </odoo>

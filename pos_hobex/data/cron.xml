@@ -5,12 +5,17 @@
         <record id="ir_cron_renew_hobex_auth" model="ir.cron">
             <field name="name">Hobex renew auth</field>
             <field name="model_id" ref="model_pos_payment_method"/>
-            <field name="type">ir.actions.server</field>
             <field name="state">code</field>
-            <field name="code">model.cron_renew_auth()</field>
+            <field name="code">model.hobex_cron_renew_auth()</field>
             <field name="interval_number">1</field>
             <field name="interval_type">days</field>
+            <!-- 17.0 still has ir.cron.numbercall, and it defaults to 1: the
+                 scheduler stops running a job once it hits 0, so without -1
+                 the token would be renewed exactly once and never again.
+                 The field is gone from 18.0 on, which is why the 18.0/19.0
+                 version of this file does not carry it. -->
             <field name="numbercall">-1</field>
+            <field name="active">True</field>
         </record>
 
     </data>
