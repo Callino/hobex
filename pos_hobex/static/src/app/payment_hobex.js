@@ -64,6 +64,16 @@ export class PaymentHobex extends PaymentInterface {
         if (!response) {
             return this._hobex_handle_payment_request_failure(line, resolve);
         }
+        if (response.responseCode === "-1") {
+            // Odoo got no usable answer from Hobex (timeout, connection error).
+            // The outcome is unknown: the customer may still be completing the
+            // payment at the terminal. Storing -1 on the line would make the
+            // next Send reset transaction_id and start a *second* transaction,
+            // so leave the line untouched and ask Hobex for the state of the
+            // one that is already running.
+            console.log("no Hobex result: " + response.responseText);
+            return this._hobex_poll_after_no_answer(line, resolve);
+        }
         line["hobex_responseCode"] = response.responseCode;
         if (response.responseCode === "0") {
             line.setPaymentStatus("done");
@@ -101,6 +111,19 @@ export class PaymentHobex extends PaymentInterface {
             }
             resolve(false);
         }
+    }
+
+    _hobex_poll_after_no_answer(line, resolve) {
+        // Same call as _hobex_update_payment_status, but resolving the promise
+        // that sendPaymentRequest is already waiting on - the transaction id
+        // stays on the line so the poll can be repeated by tapping the line.
+        this.pos.data
+            .silentCall("pos.payment.method", "proxy_hobex_status_request", [
+                [line.payment_method_id.id],
+                line.transaction_id,
+            ])
+            .then(this._hobex_handle_status_update_response.bind(this, line, resolve))
+            .catch(this._hobex_handle_status_connection_failure.bind(this, line, resolve));
     }
 
     _hobex_handle_payment_request_failure(line, resolve) {
@@ -251,6 +274,22 @@ export class PaymentHobex extends PaymentInterface {
             return;
         }
         if (response.error === true) {
+            if (response.code === "no_answer") {
+                // The state of the transaction is still unknown - keep it and
+                // let the cashier ask again instead of freeing the line for a
+                // new transaction.
+                this.pos.env.bus.trigger("hobex_error", {
+                    title: _t("Hobex"),
+                    body: response.message,
+                });
+                line.setPaymentStatus("waitingCard");
+                resolve(false);
+                return;
+            }
+            if (response.code === "not_found") {
+                // Hobex never saw this transaction, so a new one may be started.
+                line.transaction_id = null;
+            }
             line.setPaymentStatus("retry");
             resolve(false);
         } else {

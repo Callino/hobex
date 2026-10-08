@@ -114,19 +114,28 @@ class HobexTransaction(models.Model):
                 if res.get('responseCode') == "0" and res.get('cvm') in (1, 'SIGNATURE'):
                     # We do fetch the receipt from Hobex - and include it in the response
                     receipt_url = urljoin(transaction.pos_payment_method_id.hobex_api_address, "/api/transaction/download")
-                    receipt_result = requests.get(
-                        receipt_url,
-                        params={
-                            'tid': tid,
-                            'transactionId': transaction_id,
-                            'width': 32,
-                            'type': 'txt',
-                            'raw': True,
-                        },
-                        timeout=10,
-                        headers=transaction.pos_payment_method_id._get_hobex_headers(),
-                    )
-                    res['cvm_receipt'] = receipt_result.text
+                    try:
+                        receipt_result = requests.get(
+                            receipt_url,
+                            params={
+                                'tid': tid,
+                                'transactionId': transaction_id,
+                                'width': 32,
+                                'type': 'txt',
+                                'raw': True,
+                            },
+                            timeout=10,
+                            headers=transaction.pos_payment_method_id._get_hobex_headers(),
+                        )
+                        res['cvm_receipt'] = receipt_result.text
+                    except Exception as e:
+                        # The payment itself was successful. A missing signature
+                        # receipt is a printing problem, not a payment problem,
+                        # and must not be reported to the POS as a failure.
+                        _logger.warning(
+                            'hobex transaction %s: could not download the signature receipt (%s)',
+                            transaction_id, str(e),
+                        )
                 # ============================================================
                 # TODO TEMP TEST — REMOVE BEFORE PRODUCTION
                 # Force cvm == 1 + a fake merchant receipt so we can exercise

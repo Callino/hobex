@@ -604,18 +604,30 @@ class PosPaymentMethod(models.Model):
                 )
                 return res, response
             except Exception as e:
-                # Only flag the transaction failed when we actually have one;
-                # otherwise we'd hit AttributeError / NameError on the way out
-                # and lose the original cause.
+                # No usable answer from Hobex (timeout, connection error,
+                # unexpected response). The outcome of the payment is unknown -
+                # the customer may still be completing it at the terminal - so
+                # the transaction stays 'pending' and its real state has to be
+                # fetched afterwards via update_hobex_state(). Never guess a
+                # final state here: a wrong 'failed' lets the POS start a second
+                # transaction and charges the customer twice.
+                if isinstance(e, requests.exceptions.Timeout):
+                    message = _('No answer from Hobex within 80 seconds.')
+                elif isinstance(e, requests.exceptions.ConnectionError):
+                    message = _('Hobex server not reachable: %s') % (str(e),)
+                else:
+                    message = str(e)
+                # Only touch the transaction when we actually have one; the
+                # search itself may have raised. An empty recordset .update()
+                # would be a no-op anyway.
                 if transaction:
                     transaction.update({
-                        'state': 'failed',
-                        'message': str(e),
+                        'message': message,
                     })
-                _logger.info('hobex Exception: %s', str(e))
+                _logger.warning('hobex transaction %s: no result (%s)', transaction_id, str(e))
                 return {
                     'responseCode': '-1',
-                    'responseText': str(e),
+                    'responseText': message,
                 }, response
 
     def hobex_reversal_transaction(self, transactionId):
@@ -719,17 +731,35 @@ class PosPaymentMethod(models.Model):
         if not transaction:
             return {
                 'error': True,
+                'code': 'not_found',
                 'message': _('Transaction not found'),
             }
-        res, response = transaction.update_hobex_state(sync=True)
+        try:
+            res, response = transaction.update_hobex_state(sync=True)
+        except Exception as e:
+            # Hobex is not reachable, so the state of the transaction is still
+            # unknown. The POS has to keep this transaction and ask again -
+            # starting a new one here would risk a second charge.
+            _logger.warning(
+                'hobex transaction %s: state request failed (%s)', transaction_id, str(e),
+            )
+            return {
+                'error': True,
+                'code': 'no_answer',
+                'message': _('No answer from the Hobex server - the state of the payment is '
+                             'unknown. Please try again.'),
+            }
         if res:
             return {
                 'error': False,
                 'res': res,
             }
         else:
+            # 404 on the Hobex side: the transaction never reached Hobex, so a
+            # new one may be started.
             return {
                 'error': True,
+                'code': 'not_found',
                 'message': _('Hobex transaction not found'),
             }
 
