@@ -619,6 +619,12 @@ msgstr "Hobex Transaktions-ID"
 #. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "Hobex server not reachable: %s"
+msgstr "hobex-Server nicht erreichbar: %s"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
 msgid "Hobex transaction not found"
 msgstr "hobex-Transaktion nicht gefunden"
 
@@ -671,6 +677,22 @@ msgstr "Händler"
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__message
 msgid "Message"
 msgstr "Nachricht"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "No answer from Hobex within 80 seconds."
+msgstr "Keine Antwort von hobex innerhalb von 80 Sekunden."
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid ""
+"No answer from the Hobex server - the state of the payment is unknown. "
+"Please try again."
+msgstr ""
+"Keine Antwort vom hobex-Server - der Status der Zahlung ist unbekannt. Bitte "
+"erneut versuchen."
 
 #. module: pos_hobex
 #. odoo-python

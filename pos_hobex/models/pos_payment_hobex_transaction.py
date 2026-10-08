@@ -114,46 +114,28 @@ class HobexTransaction(models.Model):
                 if res.get('responseCode') == "0" and res.get('cvm') in (1, 'SIGNATURE'):
                     # We do fetch the receipt from Hobex - and include it in the response
                     receipt_url = urljoin(transaction.pos_payment_method_id.hobex_api_address, "/api/transaction/download")
-                    receipt_result = requests.get(
-                        receipt_url,
-                        params={
-                            'tid': tid,
-                            'transactionId': transaction_id,
-                            'width': 32,
-                            'type': 'txt',
-                            'raw': True,
-                        },
-                        timeout=10,
-                        headers=transaction.pos_payment_method_id._get_hobex_headers(),
-                    )
-                    res['cvm_receipt'] = receipt_result.text
-                # ============================================================
-                # TODO TEMP TEST — REMOVE BEFORE PRODUCTION
-                # Force cvm == 1 + a fake merchant receipt so we can exercise
-                # print_hobex_receipt() in the POS without a real
-                # signature-required card. Only kicks in on a successful
-                # response so other code paths stay untouched.
-                # ============================================================
-                '''
-                if res.get('responseCode') == "0":
-                    res['cvm'] = 1
-                    res['cvm_receipt'] = (
-                        "          HOBEX TEST            \r\n"
-                        "--------------------------------\r\n"
-                        "TID         : %s\r\n"
-                        "Transaktion : %s\r\n"
-                        "Karte       : VISA ****1234\r\n"
-                        "Betrag      : EUR 0.01\r\n"
-                        "--------------------------------\r\n"
-                        "Bitte unterschreiben:\r\n"
-                        "\r\n"
-                        "\r\n"
-                        "________________________________\r\n"
-                    ) % (tid, transaction_id)
-                '''
-                # ============================================================
-                # END TEMP TEST
-                # ============================================================
+                    try:
+                        receipt_result = requests.get(
+                            receipt_url,
+                            params={
+                                'tid': tid,
+                                'transactionId': transaction_id,
+                                'width': 32,
+                                'type': 'txt',
+                                'raw': True,
+                            },
+                            timeout=10,
+                            headers=transaction.pos_payment_method_id._get_hobex_headers(),
+                        )
+                        res['cvm_receipt'] = receipt_result.text
+                    except Exception as e:
+                        # The payment itself was successful. A missing signature
+                        # receipt is a printing problem, not a payment problem,
+                        # and must not be reported to the POS as a failure.
+                        _logger.warning(
+                            'hobex transaction %s: could not download the signature receipt (%s)',
+                            transaction_id, str(e),
+                        )
 
                 response_code = res.get('responseCode')
                 if response_code is None:
@@ -231,7 +213,11 @@ class HobexTransaction(models.Model):
                 transaction_id=self.transaction_id,
                 response=response
             )
-            if sync and res and res['state'] == 'INPROGRESS':
+            # .get(): only Transaction Status V2 carries a `state`, and even
+            # there it is missing on error payloads - a KeyError here would
+            # surface in the POS as "no answer" for a transaction we actually
+            # got a result for.
+            if sync and res and res.get('state') == 'INPROGRESS':
                 time.sleep(5)
             else:
                 break
@@ -239,3 +225,4 @@ class HobexTransaction(models.Model):
 
     def reversal_hobex_transaction(self):
         self.pos_payment_method_id.hobex_reversal_transaction(self.transaction_id)
+        return True

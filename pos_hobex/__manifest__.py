@@ -78,7 +78,7 @@ See ``README.rst`` for the step-by-step installation guide. In short:
 4. Fill in Hobex user and password, choose Test- or Production-Mode and click
    *Check Connection*, then pick the terminal from the list it loaded.
 """,
-    'version': '18.0.3.0.0',
+    'version': '18.0.3.1.0',
     'category': 'Point of Sale',
     'sequence': 6,
     'website': 'https://github.com/Callino/hobex',
