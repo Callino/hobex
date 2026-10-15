@@ -1169,3 +1169,15 @@ msgstr "STORNO"
 #: model:ir.model.fields,field_description:pos_hobex.field_hobex_terminal__vu
 msgid "VU Number"
 msgstr "VU-Nummer"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+msgid "The payment is still running on the terminal. Please finish it there and press \"Send\" again to fetch the result."
+msgstr "Die Zahlung läuft noch am Terminal. Bitte am Terminal abschließen und danach erneut \"Senden\" drücken, um das Ergebnis abzuholen."
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+msgid "No answer from Hobex - the state of the reversal is unknown. Please check the transaction in the Hobex portal."
+msgstr "Keine Antwort von hobex - der Status des Stornos ist unbekannt. Bitte prüfen Sie die Transaktion im hobex-Portal."

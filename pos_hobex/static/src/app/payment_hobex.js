@@ -81,35 +81,45 @@ export class PaymentHobex extends PaymentInterface {
             resolve(true);
         } else {
             line.set_payment_status("retry");
-            if (response.hobex_forbidden) {
-                // HTTP 403 from Hobex: the account is not cleared for this
-                // operation. In practice this is the refund (Gutschrift)
-                // function, which Hobex enables per account.
-                this.pos.env.bus.trigger("hobex_error", {
-                    title: _t("Hobex refund not enabled"),
-                    body: _t(
-                        "The refund function is not enabled for this Hobex account. Please ask Hobex to activate it."
-                    ),
-                });
-            } else if (response.responseCode === "8004") {
-                this.pos.env.bus.trigger("hobex_error", {
-                    title: _t("Hobex"),
-                    body: _t("The transaction was aborted at the terminal."),
-                });
-            } else if (response.responseCode === "8003") {
-                this.pos.env.bus.trigger("hobex_error", {
-                    title: _t("Hobex device error"),
-                    body: _t(
-                        "The terminal does not seem to be reachable. Please check that it is connected to the network and try again."
-                    ),
-                });
-            } else {
-                this.pos.env.bus.trigger("hobex_error", {
-                    title: _t("Hobex response"),
-                    body: response.responseCode + ": " + response.responseText,
-                });
-            }
+            this._hobex_notify_failure(response);
             resolve(false);
+        }
+    }
+
+    /**
+     * Tell the cashier why a transaction did not go through.
+     *
+     * Used for the direct answer of a payment request and for a final
+     * answer fetched with the status request, so both read the same.
+     */
+    _hobex_notify_failure(response) {
+        if (response.hobex_forbidden) {
+            // HTTP 403 from Hobex: the account is not cleared for this
+            // operation. In practice this is the refund (Gutschrift)
+            // function, which Hobex enables per account.
+            this.pos.env.bus.trigger("hobex_error", {
+                title: _t("Hobex refund not enabled"),
+                body: _t(
+                    "The refund function is not enabled for this Hobex account. Please ask Hobex to activate it."
+                ),
+            });
+        } else if (response.responseCode === "8004") {
+            this.pos.env.bus.trigger("hobex_error", {
+                title: _t("Hobex"),
+                body: _t("The transaction was aborted at the terminal."),
+            });
+        } else if (response.responseCode === "8003") {
+            this.pos.env.bus.trigger("hobex_error", {
+                title: _t("Hobex device error"),
+                body: _t(
+                    "The terminal does not seem to be reachable. Please check that it is connected to the network and try again."
+                ),
+            });
+        } else {
+            this.pos.env.bus.trigger("hobex_error", {
+                title: _t("Hobex response"),
+                body: response.responseCode + ": " + response.responseText,
+            });
         }
     }
 
@@ -149,10 +159,13 @@ export class PaymentHobex extends PaymentInterface {
         // sign stays in the Odoo payment line.
         const isRefund = line.amount < 0;
         return new Promise((resolve) => {
-            // Already have a transaction_id with a non-success answer: reset for a new attempt
-            if (line.transaction_id && "hobex_responseCode" in line && line.hobex_responseCode !== "0") {
+            // Already have a transaction_id with a non-success answer: reset for a new attempt.
+            // Test the value, not `"hobex_responseCode" in line`: the field is
+            // part of the loaded pos.payment model, so that test is always true
+            // and a still running transaction would be dropped for a second one.
+            if (line.transaction_id && line.hobex_responseCode && line.hobex_responseCode !== "0") {
                 line.transaction_id = null;
-            } else if (line.transaction_id && "hobex_responseCode" in line && line.hobex_responseCode === "0") {
+            } else if (line.transaction_id && line.hobex_responseCode === "0") {
                 // Transaction was already successful
                 line.set_payment_status("done");
                 resolve(true);
@@ -169,6 +182,11 @@ export class PaymentHobex extends PaymentInterface {
                 // No transaction yet - start a new one
                 line.set_payment_status("waitingCard");
                 line.transaction_id = Date.now();
+                // Forget the result of an earlier attempt: it belongs to the old
+                // transaction, and while it is set the next "Send" would treat
+                // this new, possibly still running one as finished and start
+                // another payment.
+                line.hobex_responseCode = false;
                 const data = {
                     // Absolute value first: Hobex wants a positive amount on
                     // a refund, and Math.round() breaks ties towards
@@ -293,34 +311,63 @@ export class PaymentHobex extends PaymentInterface {
             if (response.code === "not_found") {
                 // Hobex never saw this transaction, so a new one may be started.
                 line.transaction_id = null;
+                // Say why the line went back to "retry" - otherwise the
+                // press of "Send" looks like it did nothing.
+                this.pos.env.bus.trigger("hobex_error", {
+                    title: _t("Hobex"),
+                    // Already translated on the server.
+                    body: response.message,
+                });
             }
             line.set_payment_status("retry");
             resolve(false);
         } else {
             const result = response.res;
-            if (result.responseCode === null || result.responseCode === undefined) {
+            // The spec writes the state lowercase ("ok, void, failed"), the
+            // example response uppercase ("OK"). Compare case-insensitively.
+            const state = String(result.state || "").toUpperCase();
+            // Hobex may also answer responseCode "0" with state INPROGRESS while
+            // the terminal is still busy. Storing that "0" on the line would
+            // make the next "Send" count the line as paid, so treat it exactly
+            // like the null responseCode below.
+            if (
+                result.responseCode === null ||
+                result.responseCode === undefined ||
+                state === "INPROGRESS"
+            ) {
                 // Transaction Status V2 reports a null responseCode while the
                 // terminal is still working on the transaction. Putting the
                 // line on "retry" here would invite a second charge for a
                 // payment the customer is about to complete, so keep waiting.
+                // Say so: core shows the line as "Transaction cancelled" once
+                // this resolves falsy, which reads like a failed payment.
+                this.pos.env.bus.trigger("hobex_error", {
+                    title: _t("Hobex"),
+                    body: _t(
+                        'The payment is still running on the terminal. Please finish it there and press "Send" again to fetch the result.'
+                    ),
+                });
                 line.set_payment_status("waitingCard");
                 resolve(false);
                 return;
             }
             line["hobex_responseCode"] = result.responseCode;
-            // The spec writes the state lowercase ("ok, void, failed"), the
-            // example response uppercase ("OK"). Compare case-insensitively.
-            const state = String(result.state || "").toUpperCase();
-            if (result.responseCode === "0" && state === "OK") {
-                this.update_payment_line_values_from_hobex(line, result);
-                line.set_payment_status("done");
-                resolve(true);
-            } else if (result.responseCode === "0" && state === "VOID") {
+            if (result.responseCode === "0" && state === "VOID") {
                 this.update_payment_line_values_from_hobex(line, result);
                 line.set_amount(0);
                 line.set_payment_status("reversed");
                 resolve(true);
+            } else if (result.responseCode === "0") {
+                // OK - or a state we do not know: the server books that as
+                // 'ok' as well (_update_transaction_with_hobex_result), so the
+                // till must not offer a second payment for it.
+                this.update_payment_line_values_from_hobex(line, result);
+                line.set_payment_status("done");
+                resolve(true);
             } else {
+                // Final answer, but not a successful one (aborted at the
+                // terminal, declined, ...) - say so, like the direct answer does.
+                this._hobex_notify_failure(result);
                 line.set_payment_status("retry");
                 resolve(false);
             }
@@ -345,9 +392,13 @@ export class PaymentHobex extends PaymentInterface {
         // silentCall returns `false` on any failure; treat that as a
         // connection error instead of crashing on response.responseCode.
         if (!response) {
+            // The reversal may or may not have reached Hobex - the line stays
+            // paid, but the cashier has to check the real state.
             this.pos.env.bus.trigger("hobex_error", {
-                title: _t("Hobex error"),
-                body: _t("A communication error with the Odoo / Hobex server occurred."),
+                title: _t("Hobex"),
+                body: _t(
+                    "No answer from Hobex - the state of the reversal is unknown. Please check the transaction in the Hobex portal."
+                ),
             });
             line.set_payment_status("done");
             resolve(false);

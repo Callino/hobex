@@ -217,7 +217,10 @@ class HobexTransaction(models.Model):
             # there it is missing on error payloads - a KeyError here would
             # surface in the POS as "no answer" for a transaction we actually
             # got a result for.
-            if sync and res and res.get('state') == 'INPROGRESS':
+            # Same case-insensitive reading as in
+            # _update_transaction_with_hobex_result(): the spec writes the
+            # state lowercase, the examples uppercase.
+            if sync and res and (res.get('state') or '').upper() == 'INPROGRESS':
                 time.sleep(5)
             else:
                 break
