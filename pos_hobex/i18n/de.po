@@ -1171,3 +1171,9 @@ msgstr "Die Zahlung läuft noch am Terminal. Bitte am Terminal abschließen und 
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
 msgid "No answer from the Hobex server - the state of the payment is unknown. Please try again."
 msgstr "Keine Antwort vom Hobex-Server - der Status der Zahlung ist unbekannt. Bitte erneut versuchen."
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+msgid "No answer from Hobex - the state of the reversal is unknown. Please check the transaction in the Hobex portal."
+msgstr "Keine Antwort von Hobex - der Status des Stornos ist unbekannt. Bitte prüfen Sie die Transaktion im Hobex-Portal."
