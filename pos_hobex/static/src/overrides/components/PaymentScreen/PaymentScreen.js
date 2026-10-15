@@ -16,7 +16,11 @@ patch(PaymentScreen.prototype, {
                 (paymentLine) =>
                     paymentLine.payment_method_id.use_payment_terminal === "hobex" &&
                     !paymentLine.isDone() &&
-                    paymentLine.transaction_id
+                    paymentLine.transaction_id &&
+                    // Only lines still waiting for their result: a line with a
+                    // final answer already shows it, polling it again would only
+                    // repeat the old error every time the screen opens.
+                    !paymentLine.hobex_responseCode
             );
             if (!pendingPaymentLine) {
                 return;

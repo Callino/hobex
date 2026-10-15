@@ -240,7 +240,10 @@ class HobexTransaction(models.Model):
                 transaction_id=self.transaction_id,
                 response=response
             )
-            if sync and res and res['state'] == 'INPROGRESS':
+            # Same case-insensitive reading as in
+            # _update_transaction_with_hobex_result(): the spec writes the
+            # state lowercase, the examples uppercase.
+            if sync and res and (res.get('state') or '').upper() == 'INPROGRESS':
                 time.sleep(5)
             else:
                 break

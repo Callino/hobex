@@ -18,6 +18,7 @@ from odoo.tests import TransactionCase, tagged
 
 STATE_PATH = ('odoo.addons.pos_hobex.models.pos_payment_hobex_transaction'
               '.HobexTransaction.update_hobex_state')
+SLEEP_PATH = 'odoo.addons.pos_hobex.models.pos_payment_hobex_transaction.time.sleep'
 
 
 class FakeResponse:
@@ -133,6 +134,30 @@ class TestHobexNoAnswer(TransactionCase):
 
         self.assertFalse(result['error'])
         self.assertEqual(result['res'], {'state': 'OK'})
+
+    def test_status_poll_waits_for_a_lowercase_inprogress(self):
+        """The server keeps polling while the terminal is busy - in any case.
+
+        The spec writes the state lowercase, the examples uppercase. If the
+        wait loop only knew 'INPROGRESS', a lowercase answer would go straight
+        back to the POS and the cashier would have to press "Send" again for
+        every poll.
+        """
+        answers = [
+            FakeResponse(200, '{"responseCode": "0", "state": "inprogress"}'),
+            FakeResponse(200, '{"responseCode": "0", "state": "OK"}'),
+        ]
+
+        with self.enter_registry_test_mode():
+            with patch.object(requests, 'get', side_effect=answers) as get, \
+                    patch(SLEEP_PATH) as sleep:
+                res, _response = self.transaction.update_hobex_state(sync=True)
+
+        self.transaction.invalidate_recordset()
+        self.assertEqual(get.call_count, 2)
+        sleep.assert_called_once()
+        self.assertEqual(res['state'], 'OK')
+        self.assertEqual(self.transaction.state, 'ok')
 
     # ------------------------------------------------------------------
     # Signature receipt
