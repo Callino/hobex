@@ -4,16 +4,95 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 19.0+e\n"
+"Project-Id-Version: Odoo Server 20.0+e\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-11 15:19+0000\n"
-"PO-Revision-Date: 2026-05-11 15:19+0000\n"
+"POT-Creation-Date: 2026-10-21 07:03+0000\n"
+"PO-Revision-Date: 2026-10-21 07:03+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: \n"
 "Plural-Forms: \n"
+
+#. module: pos_hobex
+#: model:ir.module.module,description:base.module_pos_hobex
+msgid ""
+"\n"
+"Hobex Payment Terminal Integration for Odoo POS\n"
+"================================================\n"
+"\n"
+"This module integrates `Hobex <https://www.hobex.at>`_ payment terminals\n"
+"directly into the Odoo Point of Sale. The cashier triggers a card payment\n"
+"from the POS UI, the amount is sent to the terminal over Hobex's REST API,\n"
+"and the result – including approval code, card brand, masked PAN and the\n"
+"optional signature receipt – flows back into the corresponding ``pos.payment``\n"
+"record without any manual step.\n"
+"\n"
+"Supported terminals\n"
+"-------------------\n"
+"Every Hobex terminal that exposes the public REST API\n"
+"(``https://online.hobex.at`` for production,\n"
+"``https://hobexplus.brunn.hobex.at`` for the test sandbox).\n"
+"\n"
+"Key features\n"
+"------------\n"
+"* **Native POS integration** – appears alongside Adyen / Stripe / SIX in the\n"
+"  payment-provider grid; a single click on the *Hobex* tile activates the\n"
+"  module and pre-fills the ``Integration`` / ``Zahlungsterminal`` fields.\n"
+"* **Synchronous transactions** with status polling: a payment that times out\n"
+"  in the browser can be reconciled when the cashier returns to the order –\n"
+"  no double charges.\n"
+"* **Reversals & credits** straight from Odoo, kept apart because Hobex\n"
+"  treats them differently:\n"
+"\n"
+"  * ``Storno`` (VOID) cancels the original transaction and flips the linked\n"
+"    ``pos.payment.hobex.transaction`` record to ``refunded``, so the audit\n"
+"    trail on the payment method form stays consistent. Only possible until\n"
+"    Hobex closes the batch.\n"
+"  * ``Gutschrift`` (refund) books an independent credit over\n"
+"    ``/api/transaction/refund``. It needs no reference to the original sale\n"
+"    and therefore still works after the end of day. A POS refund order simply\n"
+"    takes this route: a negative payment line is booked as a credit.\n"
+"\n"
+"  Hobex enables the credit function per account. The payment method form shows\n"
+"  the flag from ``/api/account/profile``, and if Hobex refuses a credit with\n"
+"  HTTP 403 the cashier gets a message saying the function has to be enabled\n"
+"  instead of a generic error.\n"
+"* **Transaction abort** from the POS. ``Cancel`` on a waiting payment line\n"
+"  sends the abort command (TID + transaction ID) to Hobex. The payment request\n"
+"  that is still open is not interrupted — Hobex answers it with responseCode\n"
+"  8004, and that response is what releases the line, so the POS never gets out\n"
+"  of step with the terminal.\n"
+"* **Terminal selection** – ``Check Connection`` already pulls ``GET /api/terminals``\n"
+"  and offers the account's terminals as a dropdown next to the Terminal ID, so the\n"
+"  TID no longer has to be typed by hand (``Refresh Terminals`` repeats the call\n"
+"  later on). The plain ``Terminal ID`` field stays the value every API call uses,\n"
+"  so nothing changes for setups that keep entering it manually.\n"
+"* **Signature receipts** are fetched from Hobex automatically when the card\n"
+"  required CVM = signature, and printed via the IoT printer if one is\n"
+"  connected.\n"
+"* **Hardened error handling** – timeouts, connection errors, malformed\n"
+"  responses and authentication failures each produce a specific message\n"
+"  instead of a generic \"check credentials\".\n"
+"* **Daily authentication renewal** via a built-in cron job, so tokens never\n"
+"  silently expire mid-session.\n"
+"* **Locked-down credentials** – ``hobex_user``, ``hobex_pass`` and\n"
+"  ``hobex_auth_token`` are restricted to ``base.group_erp_manager``;\n"
+"  POS users cannot read them via RPC, export, or the form view.\n"
+"* **German translations** included (de_DE).\n"
+"\n"
+"Setup\n"
+"-----\n"
+"See ``README.rst`` for the step-by-step installation guide. In short:\n"
+"\n"
+"1. Install the module.\n"
+"2. Open *Point of Sale → Configuration → Payment Methods → Create*.\n"
+"3. Click the *Hobex* card in the provider grid (or set\n"
+"   *Integration = Terminal* and *Zahlungsterminal = Hobex* manually).\n"
+"4. Fill in Hobex user and password, choose Test- or Production-Mode and click\n"
+"   *Check Connection*, then pick the terminal from the list it loaded.\n"
+msgstr ""
 
 #. module: pos_hobex
 #. odoo-python
@@ -39,85 +118,149 @@ msgstr "2. Terminal"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "<i class=\"fa fa-check me-2\" aria-hidden=\"true\"/>\n                                        <span>Connected to Hobex.</span>"
-msgstr "<i class=\"fa fa-check me-2\" aria-hidden=\"true\"/>\n                                        <span>Mit Hobex verbunden.</span>"
+msgid ""
+"<i class=\"fa fa-check me-2\" aria-hidden=\"true\"/>\n"
+"                                        <span>Connected to Hobex.</span>"
+msgstr ""
+"<i class=\"fa fa-check me-2\" aria-hidden=\"true\"/>\n"
+"                                        <span>Mit Hobex verbunden.</span>"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "<i class=\"fa fa-credit-card me-1\" aria-hidden=\"true\"/>\n                                        Sample Transaction"
-msgstr "<i class=\"fa fa-credit-card me-1\" aria-hidden=\"true\"/>\n                                        Beispieltransaktion"
+msgid ""
+"<i class=\"fa fa-credit-card me-1\" aria-hidden=\"true\"/>\n"
+"                                        Sample Transaction"
+msgstr ""
+"<i class=\"fa fa-credit-card me-1\" aria-hidden=\"true\"/>\n"
+"                                        Beispieltransaktion"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "<i class=\"fa fa-download me-1\" aria-hidden=\"true\"/>\n                                        Load Terminals"
-msgstr "<i class=\"fa fa-download me-1\" aria-hidden=\"true\"/>\n                                        Terminals laden"
+msgid ""
+"<i class=\"fa fa-download me-1\" aria-hidden=\"true\"/>\n"
+"                                        Load Terminals"
+msgstr ""
+"<i class=\"fa fa-download me-1\" aria-hidden=\"true\"/>\n"
+"                                        Terminals laden"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "<i class=\"fa fa-exclamation-triangle me-2\" aria-hidden=\"true\"/>\n                                        <span>No terminal selected yet. Pick one above, the Terminal ID is filled in automatically.</span>"
-msgstr "<i class=\"fa fa-exclamation-triangle me-2\" aria-hidden=\"true\"/>\n                                        <span>Noch kein Terminal gewählt. Bitte oben eines auswählen, die Terminal-ID wird dabei automatisch gesetzt.</span>"
+msgid ""
+"<i class=\"fa fa-exclamation-triangle me-2\" aria-hidden=\"true\"/>\n"
+"                                        <span>No terminal selected yet. Pick one above, the Terminal ID is filled in automatically.</span>"
+msgstr ""
+"<i class=\"fa fa-exclamation-triangle me-2\" aria-hidden=\"true\"/>\n"
+"                                        <span>Noch kein Terminal gewählt. Bitte oben eines auswählen, die Terminal-ID wird dabei automatisch gesetzt.</span>"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "<i class=\"fa fa-exclamation-triangle me-2\" aria-hidden=\"true\"/>\n                                    <span>Hobex reports this terminal as inactive. Payments sent to it come back as a device error.</span>"
-msgstr "<i class=\"fa fa-exclamation-triangle me-2\" aria-hidden=\"true\"/>\n                                    <span>Hobex meldet dieses Terminal als inaktiv. Zahlungen an dieses Terminal kommen als Gerätefehler zurück.</span>"
+msgid ""
+"<i class=\"fa fa-exclamation-triangle me-2\" aria-hidden=\"true\"/>\n"
+"                                    <span>Hobex reports this terminal as inactive. Payments sent to it come back as a device error.</span>"
+msgstr ""
+"<i class=\"fa fa-exclamation-triangle me-2\" aria-hidden=\"true\"/>\n"
+"                                    <span>Hobex meldet dieses Terminal als inaktiv. Zahlungen an dieses Terminal kommen als Gerätefehler zurück.</span>"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "<i class=\"fa fa-exclamation-triangle me-2\" aria-hidden=\"true\"/>\n                            <span>Attention, there are active POS sessions based on this payment journal!</span>"
-msgstr "<i class=\"fa fa-exclamation-triangle me-2\" aria-hidden=\"true\"/>\n                            <span>Achtung, es gibt aktive Kassensitzungen, die diese Zahlungsmethode verwenden!</span>"
+msgid ""
+"<i class=\"fa fa-exclamation-triangle me-2\" aria-hidden=\"true\"/>\n"
+"                            <span>Attention, there are active POS sessions based on this payment journal!</span>"
+msgstr ""
+"<i class=\"fa fa-exclamation-triangle me-2\" aria-hidden=\"true\"/>\n"
+"                            <span>Achtung, es gibt aktive Kassensitzungen, die diese Zahlungsmethode verwenden!</span>"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "<i class=\"fa fa-external-link me-1\" aria-hidden=\"true\"/>\n                                    Hobex Dashboard"
-msgstr "<i class=\"fa fa-external-link me-1\" aria-hidden=\"true\"/>\n                                    Hobex Dashboard"
+msgid ""
+"<i class=\"fa fa-external-link me-1\" aria-hidden=\"true\"/>\n"
+"                                    Hobex Dashboard"
+msgstr ""
+"<i class=\"fa fa-external-link me-1\" aria-hidden=\"true\"/>\n"
+"                                    Hobex Dashboard"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "<i class=\"fa fa-handshake-o me-1\" aria-hidden=\"true\"/>\n                                        Check Connection"
-msgstr "<i class=\"fa fa-handshake-o me-1\" aria-hidden=\"true\"/>\n                                        Verbindung prüfen"
+msgid ""
+"<i class=\"fa fa-handshake-o me-1\" aria-hidden=\"true\"/>\n"
+"                                        Check Connection"
+msgstr ""
+"<i class=\"fa fa-handshake-o me-1\" aria-hidden=\"true\"/>\n"
+"                                        Verbindung prüfen"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n                                        <span>Enter user and password, then click Check Connection. The terminals of this account are loaded right away.</span>"
-msgstr "<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n                                        <span>Benutzer und Passwort eintragen und auf Verbindung prüfen klicken. Die Terminals dieses Kontos werden dabei gleich mitgeladen.</span>"
+msgid ""
+"<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n"
+"                                        <span>Enter user and password, then click Check Connection. The terminals of this account are loaded right away.</span>"
+msgstr ""
+"<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n"
+"                                        <span>Benutzer und Passwort eintragen und auf Verbindung prüfen klicken. Die Terminals dieses Kontos werden dabei gleich mitgeladen.</span>"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n                                        <span>Terminals can only be loaded once the connection has been checked in step 1. Until then the Terminal ID can also be entered by hand.</span>"
-msgstr "<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n                                        <span>Terminals können erst geladen werden, wenn die Verbindung in Schritt 1 geprüft wurde. Bis dahin kann die Terminal-ID auch von Hand eingetragen werden.</span>"
+msgid ""
+"<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n"
+"                                        <span>Terminals can only be loaded once the connection has been checked in step 1. Until then the Terminal ID can also be entered by hand.</span>"
+msgstr ""
+"<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n"
+"                                        <span>Terminals können erst geladen werden, wenn die Verbindung in Schritt 1 geprüft wurde. Bis dahin kann die Terminal-ID auch von Hand eingetragen werden.</span>"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n                                <span>The refund function is not enabled for this Hobex account. Refunds at the point of sale will be rejected by Hobex until they activate it.</span>"
-msgstr "<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n                                <span>Die Gutschrift-Funktion ist für dieses hobex-Konto nicht freigeschaltet. Rückgaben an der Kasse werden von Hobex abgelehnt, bis die Funktion aktiviert ist.</span>"
+msgid ""
+"<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n"
+"                                <span>The refund function is not enabled for this Hobex account. Refunds at the point of sale will be rejected by Hobex until they activate it.</span>"
+msgstr ""
+"<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n"
+"                                <span>Die Gutschrift-Funktion ist für dieses hobex-Konto nicht freigeschaltet. Rückgaben an der Kasse werden von Hobex abgelehnt, bis die Funktion aktiviert ist.</span>"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.hobex_terminal_view_form
-msgid "<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n                            <span>This data comes from Hobex and is overwritten every time the terminals are loaded.</span>"
-msgstr "<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n                            <span>Diese Daten stammen von Hobex und werden bei jedem Laden der Terminals überschrieben.</span>"
+msgid ""
+"<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n"
+"                            <span>This data comes from Hobex and is overwritten every time the terminals are loaded.</span>"
+msgstr ""
+"<i class=\"fa fa-info-circle me-2\" aria-hidden=\"true\"/>\n"
+"                            <span>Diese Daten stammen von Hobex und werden bei jedem Laden der Terminals überschrieben.</span>"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "<i class=\"fa fa-refresh me-1\" aria-hidden=\"true\"/>\n                                        Refresh Terminals"
-msgstr "<i class=\"fa fa-refresh me-1\" aria-hidden=\"true\"/>\n                                        Terminals aktualisieren"
+msgid ""
+"<i class=\"fa fa-refresh me-1\" aria-hidden=\"true\"/>\n"
+"                                        Refresh Terminals"
+msgstr ""
+"<i class=\"fa fa-refresh me-1\" aria-hidden=\"true\"/>\n"
+"                                        Terminals aktualisieren"
 
 #. module: pos_hobex
 #. odoo-javascript
 #: code:addons/pos_hobex/static/src/overrides/components/TicketScreen/TicketScreen.js:0
-msgid "A card payment from today can still be reversed at the terminal, but only from the back end (Orders / Payments) and it does not correct the order in Odoo."
-msgstr "Eine Kartenzahlung von heute kann am Terminal noch storniert werden, allerdings nur im Backend (Bestellungen / Zahlungen) und ohne Korrektur des Belegs in Odoo."
+msgid ""
+"A card payment from today can still be reversed at the terminal, but only "
+"from the back end (Orders / Payments) and it does not correct the order in "
+"Odoo."
+msgstr ""
+"Eine Kartenzahlung von heute kann am Terminal noch storniert werden, "
+"allerdings nur im Backend (Bestellungen / Zahlungen) und ohne Korrektur des "
+"Belegs in Odoo."
 
 #. module: pos_hobex
 #. odoo-javascript
 #: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
 msgid "A communication error with the Odoo / Hobex server occurred."
-msgstr "Es ist ein Fehler bei der Kommunikation mit dem Odoo-/hobex-Server aufgetreten."
+msgstr ""
+"Es ist ein Fehler bei der Kommunikation mit dem Odoo-/hobex-Server "
+"aufgetreten."
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.view_pos_payment_form_hobex
-msgid "A credit for the full payment amount will be booked on the terminal. The customer has to present the card for it. Continue?"
-msgstr "Es wird eine Gutschrift über den vollen Zahlungsbetrag am Terminal gebucht. Der Kunde muss dafür die Karte am Terminal vorlegen. Fortfahren?"
+msgid ""
+"A credit for the full payment amount will be booked on the terminal. The "
+"customer has to present the card for it. Continue?"
+msgstr ""
+"Es wird eine Gutschrift über den vollen Zahlungsbetrag am Terminal gebucht. "
+"Der Kunde muss dafür die Karte am Terminal vorlegen. Fortfahren?"
 
 #. module: pos_hobex
 #. odoo-python
@@ -138,10 +281,19 @@ msgid "A terminal ID can only be listed once per payment method!"
 msgstr "Eine Terminal-ID darf pro Zahlungsmethode nur einmal vorkommen!"
 
 #. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_order_receipt
+msgid "AID"
+msgstr "AID"
+
+#. module: pos_hobex
 #. odoo-javascript
 #: code:addons/pos_hobex/static/src/overrides/components/PaymentScreen/payment_lines.xml:0
-msgid "Abort sent. If the terminal keeps asking for the card, cancel the payment on the terminal itself."
-msgstr "Abbruch gesendet. Verlangt das Terminal weiterhin die Karte, bitte die Zahlung direkt am Gerät abbrechen."
+msgid ""
+"Abort sent. If the terminal keeps asking for the card, cancel the payment on"
+" the terminal itself."
+msgstr ""
+"Abbruch gesendet. Verlangt das Terminal weiterhin die Karte, bitte die "
+"Zahlung direkt am Gerät abbrechen."
 
 #. module: pos_hobex
 #: model:ir.model.fields.selection,name:pos_hobex.selection__pos_payment_hobex_transaction__state__abort
@@ -149,9 +301,21 @@ msgid "Aborted"
 msgstr "Abgebrochen"
 
 #. module: pos_hobex
+#: model:ir.module.module,summary:base.module_pos_hobex
+msgid ""
+"Accept card and contactless payments directly in the Odoo Point of Sale "
+"through Hobex payment terminals."
+msgstr ""
+
+#. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.res_config_settings_view_form_pos_hobex
 msgid "Accept payments with a Hobex payment terminal"
 msgstr "Zahlungen mit einem hobex-Zahlungsterminal annehmen"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__active_pos_session_ids
+msgid "Active POS Sessions"
+msgstr "Aktive Kassensitzungen"
 
 #. module: pos_hobex
 #: model:ir.model.fields,field_description:pos_hobex.field_hobex_terminal__hobex_active
@@ -160,24 +324,12 @@ msgid "Active at Hobex"
 msgstr "Bei Hobex aktiv"
 
 #. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__active_pos_session_ids
-msgid "Active POS Sessions"
-msgstr "Aktive Kassensitzungen"
-
-#. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
-msgid "AID"
-msgstr "AID"
-
-#. module: pos_hobex
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__amount
 msgid "Amount"
 msgstr "Betrag"
 
 #. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_order_receipt
 msgid "Approval code"
 msgstr "Autorisierungscode"
 
@@ -196,14 +348,20 @@ msgstr "Achtung"
 #. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
-msgid "Authentication token was renewed, %s terminal(s) available for this account."
-msgstr "Der Authentifizierungs-Token wurde erneuert, %s Terminal(s) stehen für dieses Konto zur Verfügung."
+msgid ""
+"Authentication token was renewed, %s terminal(s) available for this account."
+msgstr ""
+"Der Authentifizierungs-Token wurde erneuert, %s Terminal(s) stehen für "
+"dieses Konto zur Verfügung."
 
 #. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
-msgid "Authentication token was renewed, but the terminal list could not be loaded."
-msgstr "Der Authentifizierungs-Token wurde erneuert, die Terminalliste konnte aber nicht geladen werden."
+msgid ""
+"Authentication token was renewed, but the terminal list could not be loaded."
+msgstr ""
+"Der Authentifizierungs-Token wurde erneuert, die Terminalliste konnte aber "
+"nicht geladen werden."
 
 #. module: pos_hobex
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_terminal_ids
@@ -212,17 +370,24 @@ msgstr "Verfügbare Terminals"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.view_pos_payment_form_hobex
-msgid "Books an independent credit on the terminal. Works after the end of day, but the customer has to present the card."
-msgstr "Bucht eine eigenständige Gutschrift am Terminal. Funktioniert auch nach dem Tagesabschluss, der Kunde muss dafür die Karte vorlegen."
+msgid ""
+"Books an independent credit on the terminal. Works after the end of day, but"
+" the customer has to present the card."
+msgstr ""
+"Bucht eine eigenständige Gutschrift am Terminal. Funktioniert auch nach dem "
+"Tagesabschluss, der Kunde muss dafür die Karte vorlegen."
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.view_pos_payment_form_hobex
-msgid "Cancels the original transaction on the Hobex side. Only possible before the end of day."
-msgstr "Nimmt die Originaltransaktion bei Hobex zurück. Nur bis zum Tagesabschluss möglich."
+msgid ""
+"Cancels the original transaction on the Hobex side. Only possible before the"
+" end of day."
+msgstr ""
+"Nimmt die Originaltransaktion bei Hobex zurück. Nur bis zum Tagesabschluss "
+"möglich."
 
 #. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_order_receipt
 msgid "Card"
 msgstr "Karte"
 
@@ -266,8 +431,12 @@ msgstr "Verbunden"
 #. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
-msgid "Could not reach the Hobex server (%s). Please check your internet connection and the configured terminal mode."
-msgstr "Der hobex-Server (%s) konnte nicht erreicht werden. Bitte überprüfen Sie Ihre Internetverbindung und den konfigurierten Terminal-Modus."
+msgid ""
+"Could not reach the Hobex server (%s). Please check your internet connection"
+" and the configured terminal mode."
+msgstr ""
+"Der hobex-Server (%s) konnte nicht erreicht werden. Bitte überprüfen Sie "
+"Ihre Internetverbindung und den konfigurierten Terminal-Modus."
 
 #. module: pos_hobex
 #: model:ir.model.fields,field_description:pos_hobex.field_hobex_terminal__create_uid
@@ -282,8 +451,7 @@ msgid "Created on"
 msgstr "Erstellt am"
 
 #. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_order_receipt
 msgid "Crypto"
 msgstr "Crypto"
 
@@ -294,6 +462,7 @@ msgstr "Währung"
 
 #. module: pos_hobex
 #: model:ir.model.fields,field_description:pos_hobex.field_hobex_terminal__display_name
+#: model:ir.model.fields,field_description:pos_hobex.field_ir_ui_view__display_name
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__display_name
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__display_name
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__display_name
@@ -304,8 +473,12 @@ msgstr "Anzeigename"
 #. module: pos_hobex
 #. odoo-javascript
 #: code:addons/pos_hobex/static/src/overrides/components/TicketScreen/TicketScreen.js:0
-msgid "Every line of this order has already been refunded, so there is nothing left to refund."
-msgstr "Alle Positionen dieses Belegs wurden bereits erstattet, es ist nichts mehr zu erstatten."
+msgid ""
+"Every line of this order has already been refunded, so there is nothing left"
+" to refund."
+msgstr ""
+"Alle Positionen dieses Belegs wurden bereits erstattet, es ist nichts mehr "
+"zu erstatten."
 
 #. module: pos_hobex
 #: model:ir.model.fields.selection,name:pos_hobex.selection__pos_payment_hobex_transaction__state__failed
@@ -326,24 +499,11 @@ msgstr "Die Terminals dieses hobex-Kontos erneut laden"
 #. module: pos_hobex
 #. odoo-javascript
 #: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
-#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
 #: model_terms:ir.ui.view,arch_db:pos_hobex.hobex_terminal_view_form
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_hobex_transaction_view_form
 #: model_terms:ir.ui.view,arch_db:pos_hobex.res_config_settings_view_form_pos_hobex
 msgid "Hobex"
 msgstr "Hobex"
-
-#. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
-msgid "Hobex abort failed"
-msgstr "Hobex Abbruch fehlgeschlagen"
-
-#. module: pos_hobex
-#. odoo-python
-#: code:addons/pos_hobex/models/pos_payment_method.py:0
-msgid "Hobex accepted the sample transaction."
-msgstr "Hobex hat die Testtransaktion angenommen."
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
@@ -361,16 +521,9 @@ msgid "Hobex Approval Code"
 msgstr "Hobex Autorisierungscode"
 
 #. module: pos_hobex
-#. odoo-python
-#: code:addons/pos_hobex/models/pos_payment_method.py:0
-msgid "Hobex authentication failed"
-msgstr "hobex-Authentifizierung fehlgeschlagen"
-
-#. module: pos_hobex
-#. odoo-python
-#: code:addons/pos_hobex/models/pos_payment_method.py:0
-msgid "Hobex authentication failed: %s"
-msgstr "hobex-Authentifizierung fehlgeschlagen: %s"
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_cvm
+msgid "Hobex CVM"
+msgstr "Hobex CVM"
 
 #. module: pos_hobex
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_brand
@@ -393,6 +546,139 @@ msgid "Hobex Card Number"
 msgstr "Hobex Kartennummer"
 
 #. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_actionCode
+msgid "Hobex Crypto Code"
+msgstr "Hobex Crypto-Code"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
+msgid "Hobex Logo"
+msgstr "Hobex Logo"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
+msgid "Hobex Online Portal"
+msgstr "Hobex Onlineportal"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.view_pos_payment_form_hobex
+msgid "Hobex Payment Details"
+msgstr "Hobex Zahlungsdetails"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_res_config_settings__module_pos_hobex
+#: model:ir.module.module,shortdesc:base.module_pos_hobex
+msgid "Hobex Payment Terminal"
+msgstr "Hobex Payment Terminal"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_receipt
+msgid "Hobex Receipt Number"
+msgstr "Hobex Belegnummer"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_reference
+msgid "Hobex Ref Number"
+msgstr "Hobex Referenznummer"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_refund_transaction_id
+msgid "Hobex Refund Transaction"
+msgstr "Hobex Gutschrift-Transaktion"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_responseCode
+msgid "Hobex Response Code"
+msgstr "Hobex Antwort-Code"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_responseText
+msgid "Hobex Response Text"
+msgstr "Hobex Antwort-Text"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_hobex_transaction_view_list
+msgid "Hobex Status"
+msgstr "hobex-Status"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_tid
+msgid "Hobex TID"
+msgstr "Hobex TID"
+
+#. module: pos_hobex
+#: model:ir.model,name:pos_hobex.model_hobex_terminal
+#: model_terms:ir.ui.view,arch_db:pos_hobex.hobex_terminal_view_form
+msgid "Hobex Terminal"
+msgstr "Hobex Terminal"
+
+#. module: pos_hobex
+#: model:ir.actions.act_window,name:pos_hobex.hobex_terminal_action
+#: model:ir.ui.menu,name:pos_hobex.menu_hobex_terminal
+#: model_terms:ir.ui.view,arch_db:pos_hobex.hobex_terminal_view_list
+#: model_terms:ir.ui.view,arch_db:pos_hobex.hobex_terminal_view_search
+msgid "Hobex Terminals"
+msgstr "Hobex Terminals"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
+msgid "Hobex Test Portal"
+msgstr "Hobex Testportal"
+
+#. module: pos_hobex
+#: model:ir.model,name:pos_hobex.model_pos_payment_hobex_transaction
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_hobex_transaction_view_form
+msgid "Hobex Transaction"
+msgstr "Hobex-Transaktion"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_transactionDate
+msgid "Hobex Transaction Date"
+msgstr "Hobex Transaktionsdatum"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_transactionId
+msgid "Hobex Transaction ID"
+msgstr "Hobex Transaktions-ID"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_transactionType
+msgid "Hobex Transaction Type"
+msgstr "Hobex Transaktionsart"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_hobex_transaction_view_list
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_hobex_transaction_view_search
+msgid "Hobex Transactions"
+msgstr "Hobex-Transaktionen"
+
+#. module: pos_hobex
+#. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+msgid "Hobex abort failed"
+msgstr "Hobex Abbruch fehlgeschlagen"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "Hobex accepted the sample transaction."
+msgstr "Hobex hat die Testtransaktion angenommen."
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "Hobex authentication failed"
+msgstr "hobex-Authentifizierung fehlgeschlagen"
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "Hobex authentication failed: %s"
+msgstr "hobex-Authentifizierung fehlgeschlagen: %s"
+
+#. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
 msgid "Hobex connection successful"
@@ -403,16 +689,6 @@ msgstr "hobex-Verbindung erfolgreich"
 #: code:addons/pos_hobex/models/pos_payment.py:0
 msgid "Hobex credit booked"
 msgstr "Hobex Gutschrift gebucht"
-
-#. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_actionCode
-msgid "Hobex Crypto Code"
-msgstr "Hobex Crypto-Code"
-
-#. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_cvm
-msgid "Hobex CVM"
-msgstr "Hobex CVM"
 
 #. module: pos_hobex
 #. odoo-javascript
@@ -437,36 +713,6 @@ msgid "Hobex has enabled the reversal (Storno) function for this account."
 msgstr "Hobex hat die Storno-Funktion für dieses Konto freigeschaltet."
 
 #. module: pos_hobex
-#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "Hobex Logo"
-msgstr "Hobex Logo"
-
-#. module: pos_hobex
-#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "Hobex Online Portal"
-msgstr "Hobex Onlineportal"
-
-#. module: pos_hobex
-#: model_terms:ir.ui.view,arch_db:pos_hobex.view_pos_payment_form_hobex
-msgid "Hobex Payment Details"
-msgstr "Hobex Zahlungsdetails"
-
-#. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_res_config_settings__module_pos_hobex
-msgid "Hobex Payment Terminal"
-msgstr "Hobex Payment Terminal"
-
-#. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_receipt
-msgid "Hobex Receipt Number"
-msgstr "Hobex Belegnummer"
-
-#. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_reference
-msgid "Hobex Ref Number"
-msgstr "Hobex Referenznummer"
-
-#. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment.py:0
 msgid "Hobex refund failed: %(code)s %(text)s"
@@ -477,11 +723,6 @@ msgstr "Hobex Gutschrift fehlgeschlagen: %(code)s %(text)s"
 #: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
 msgid "Hobex refund not enabled"
 msgstr "hobex-Gutschrift nicht freigeschaltet"
-
-#. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_refund_transaction_id
-msgid "Hobex Refund Transaction"
-msgstr "Hobex Gutschrift-Transaktion"
 
 #. module: pos_hobex
 #: model:ir.actions.server,name:pos_hobex.ir_cron_renew_hobex_auth_ir_actions_server
@@ -498,7 +739,8 @@ msgstr "hobex-Anfrage fehlgeschlagen: %s"
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
 msgid "Hobex request to %(endpoint)s failed (HTTP %(status)s): %(body)s"
-msgstr "Hobex Anfrage an %(endpoint)s fehlgeschlagen (HTTP %(status)s): %(body)s"
+msgstr ""
+"Hobex Anfrage an %(endpoint)s fehlgeschlagen (HTTP %(status)s): %(body)s"
 
 #. module: pos_hobex
 #. odoo-javascript
@@ -506,16 +748,6 @@ msgstr "Hobex Anfrage an %(endpoint)s fehlgeschlagen (HTTP %(status)s): %(body)s
 #: code:addons/pos_hobex/static/src/overrides/components/PaymentScreen/PaymentScreen.js:0
 msgid "Hobex response"
 msgstr "Hobex Antwort"
-
-#. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_responseCode
-msgid "Hobex Response Code"
-msgstr "Hobex Antwort-Code"
-
-#. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_responseText
-msgid "Hobex Response Text"
-msgstr "Hobex Antwort-Text"
 
 #. module: pos_hobex
 #. odoo-python
@@ -527,7 +759,8 @@ msgstr "Hobex hat eine ungültige Antwort geliefert: %s"
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
 msgid "Hobex returned an unexpected response (HTTP %(status)s): %(body)s"
-msgstr "Hobex hat eine unerwartete Antwort geliefert (HTTP %(status)s): %(body)s"
+msgstr ""
+"Hobex hat eine unerwartete Antwort geliefert (HTTP %(status)s): %(body)s"
 
 #. module: pos_hobex
 #. odoo-python
@@ -560,63 +793,6 @@ msgid "Hobex sample transaction successful"
 msgstr "hobex-Testtransaktion erfolgreich"
 
 #. module: pos_hobex
-#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_hobex_transaction_view_list
-msgid "Hobex Status"
-msgstr "hobex-Status"
-
-#. module: pos_hobex
-#: model:ir.model,name:pos_hobex.model_hobex_terminal
-#: model_terms:ir.ui.view,arch_db:pos_hobex.hobex_terminal_view_form
-msgid "Hobex Terminal"
-msgstr "Hobex Terminal"
-
-#. module: pos_hobex
-#: model:ir.actions.act_window,name:pos_hobex.hobex_terminal_action
-#: model:ir.ui.menu,name:pos_hobex.menu_hobex_terminal
-#: model_terms:ir.ui.view,arch_db:pos_hobex.hobex_terminal_view_list
-#: model_terms:ir.ui.view,arch_db:pos_hobex.hobex_terminal_view_search
-msgid "Hobex Terminals"
-msgstr "Hobex Terminals"
-
-#. module: pos_hobex
-#. odoo-python
-#: code:addons/pos_hobex/models/pos_payment_method.py:0
-msgid "Hobex terminals loaded"
-msgstr "Hobex Terminals geladen"
-
-#. module: pos_hobex
-#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
-msgid "Hobex Test Portal"
-msgstr "Hobex Testportal"
-
-#. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_tid
-msgid "Hobex TID"
-msgstr "Hobex TID"
-
-#. module: pos_hobex
-#: model:ir.model,name:pos_hobex.model_pos_payment_hobex_transaction
-#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_hobex_transaction_view_form
-msgid "Hobex Transaction"
-msgstr "Hobex-Transaktion"
-
-#. module: pos_hobex
-#. odoo-python
-#: code:addons/pos_hobex/models/pos_payment_method.py:0
-msgid "Hobex transaction %s/%s not found in DB."
-msgstr "Hobex-Transaktion %s/%s wurde in der Datenbank nicht gefunden."
-
-#. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_transactionDate
-msgid "Hobex Transaction Date"
-msgstr "Hobex Transaktionsdatum"
-
-#. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_transactionId
-msgid "Hobex Transaction ID"
-msgstr "Hobex Transaktions-ID"
-
-#. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
 msgid "Hobex server not reachable: %s"
@@ -625,24 +801,24 @@ msgstr "hobex-Server nicht erreichbar: %s"
 #. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
-msgid "Hobex transaction not found"
-msgstr "hobex-Transaktion nicht gefunden"
-
-#. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__hobex_transactionType
-msgid "Hobex Transaction Type"
-msgstr "Hobex Transaktionsart"
+msgid "Hobex terminals loaded"
+msgstr "Hobex Terminals geladen"
 
 #. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
-#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_hobex_transaction_view_list
-#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_hobex_transaction_view_search
-msgid "Hobex Transactions"
-msgstr "Hobex-Transaktionen"
+msgid "Hobex transaction %s/%s not found in DB."
+msgstr "Hobex-Transaktion %s/%s wurde in der Datenbank nicht gefunden."
+
+#. module: pos_hobex
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment_method.py:0
+msgid "Hobex transaction not found"
+msgstr "hobex-Transaktion nicht gefunden"
 
 #. module: pos_hobex
 #: model:ir.model.fields,field_description:pos_hobex.field_hobex_terminal__id
+#: model:ir.model.fields,field_description:pos_hobex.field_ir_ui_view__id
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment__id
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__id
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__id
@@ -691,8 +867,8 @@ msgid ""
 "No answer from the Hobex server - the state of the payment is unknown. "
 "Please try again."
 msgstr ""
-"Keine Antwort vom hobex-Server - der Status der Zahlung ist unbekannt. Bitte "
-"erneut versuchen."
+"Keine Antwort vom hobex-Server - der Status der Zahlung ist unbekannt. Bitte"
+" erneut versuchen."
 
 #. module: pos_hobex
 #. odoo-python
@@ -703,20 +879,22 @@ msgstr "Keine weiteren Angaben vom Terminal."
 #. module: pos_hobex
 #. odoo-javascript
 #: code:addons/pos_hobex/static/src/overrides/components/TicketScreen/TicketScreen.js:0
-msgid "No quantity is selected for the refund. Pick a line and enter the quantity to refund."
-msgstr "Es ist keine Menge für die Rückerstattung ausgewählt. Bitte eine Position wählen und die zu erstattende Menge eingeben."
-
-#. module: pos_hobex
-#. odoo-python
-#: code:addons/pos_hobex/models/pos_payment.py:0
-msgid "no response from Hobex"
-msgstr "keine Antwort von Hobex"
+msgid ""
+"No quantity is selected for the refund. Pick a line and enter the quantity "
+"to refund."
+msgstr ""
+"Es ist keine Menge für die Rückerstattung ausgewählt. Bitte eine Position "
+"wählen und die zu erstattende Menge eingeben."
 
 #. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
-msgid "No terminal is selected for the payment method \"%s\". Open it and pick one under \"Terminal\"."
-msgstr "Für die Zahlungsmethode \"%s\" ist kein Terminal ausgewählt. Bitte die Zahlungsmethode öffnen und unter \"Terminal\" eines auswählen."
+msgid ""
+"No terminal is selected for the payment method \"%s\". Open it and pick one "
+"under \"Terminal\"."
+msgstr ""
+"Für die Zahlungsmethode \"%s\" ist kein Terminal ausgewählt. Bitte die "
+"Zahlungsmethode öffnen und unter \"Terminal\" eines auswählen."
 
 #. module: pos_hobex
 #: model_terms:ir.actions.act_window,help:pos_hobex.hobex_terminal_action
@@ -735,8 +913,7 @@ msgid "Only successful transactions can be reversed!"
 msgstr "Nur erfolgreiche Transaktionen können storniert werden!"
 
 #. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_order_receipt
 msgid "PAN"
 msgstr "PAN"
 
@@ -745,6 +922,11 @@ msgstr "PAN"
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
 msgid "PAN: %s"
 msgstr "PAN: %s"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_order_receipt
+msgid "PURCHASE"
+msgstr "KAUF"
 
 #. module: pos_hobex
 #. odoo-python
@@ -778,18 +960,22 @@ msgstr "Ausstehend"
 
 #. module: pos_hobex
 #: model:ir.model.fields,help:pos_hobex.field_pos_payment_method__hobex_terminal_ref_id
-msgid "Pick one of the terminals Hobex reports for this account to fill in the Terminal ID."
-msgstr "Wählen Sie eines der Terminals, die Hobex für dieses Konto meldet, um die Terminal-ID zu übernehmen."
-
-#. module: pos_hobex
-#: model:ir.model,name:pos_hobex.model_pos_payment_method
-msgid "Point of Sale Payment Methods"
-msgstr "Zahlungsmethoden des Kassensystems"
+msgid ""
+"Pick one of the terminals Hobex reports for this account to fill in the "
+"Terminal ID."
+msgstr ""
+"Wählen Sie eines der Terminals, die Hobex für dieses Konto meldet, um die "
+"Terminal-ID zu übernehmen."
 
 #. module: pos_hobex
 #: model:ir.model,name:pos_hobex.model_pos_payment
-msgid "Point of Sale Payments"
-msgstr "Kassenzahlungen"
+msgid "Point of Sale Payment"
+msgstr "Zahlung am Kassensystem"
+
+#. module: pos_hobex
+#: model:ir.model,name:pos_hobex.model_pos_payment_method
+msgid "Point of Sale Payment Method"
+msgstr "Zahlungsmethode am Kassensystem"
 
 #. module: pos_hobex
 #: model:ir.model.fields.selection,name:pos_hobex.selection__pos_payment_method__hobex_terminal_mode__production
@@ -797,10 +983,9 @@ msgid "Production"
 msgstr "Echtbetrieb"
 
 #. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
-msgid "PURCHASE"
-msgstr "KAUF"
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_order_receipt
+msgid "RC:"
+msgstr "RC:"
 
 #. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_hobex_transaction_view_form
@@ -808,14 +993,7 @@ msgid "Raw response"
 msgstr "Rohantwort"
 
 #. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
-msgid "RC:"
-msgstr "RC:"
-
-#. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_order_receipt
 msgid "Receipt#"
 msgstr "Beleg#"
 
@@ -855,12 +1033,6 @@ msgstr "Gutschriften"
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_can_refund
 msgid "Refunds enabled"
 msgstr "Gutschriften freigeschaltet"
-
-#. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/overrides/components/PaymentScreen/payment_lines.xml:0
-msgid "Request sent"
-msgstr "Anfrage gesendet"
 
 #. module: pos_hobex
 #. odoo-python
@@ -914,8 +1086,7 @@ msgid "Send a 0.01 EUR test transaction to the terminal"
 msgstr "Eine Testtransaktion über 0,01 EUR an das Terminal senden"
 
 #. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_order_receipt
 msgid "Signature"
 msgstr "Unterschrift"
 
@@ -926,14 +1097,15 @@ msgid "State"
 msgstr "Status"
 
 #. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__tid
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_order_receipt
+msgid "TID"
+msgstr "TID"
+
+#. module: pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.hobex_terminal_view_form
 msgid "Terminal"
 msgstr "Terminal"
-
-#. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_terminal_active
-msgid "Terminal active at Hobex"
-msgstr "Terminal bei Hobex aktiv"
 
 #. module: pos_hobex
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_api_address
@@ -961,9 +1133,20 @@ msgid "Terminal Type"
 msgstr "Terminal-Typ"
 
 #. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_terminal_active
+msgid "Terminal active at Hobex"
+msgstr "Terminal bei Hobex aktiv"
+
+#. module: pos_hobex
 #: model_terms:ir.actions.act_window,help:pos_hobex.hobex_terminal_action
-msgid "Terminals are not created here, they are loaded from Hobex: Point of Sale / Configuration / Payment Methods, open the Hobex method and click Check Connection."
-msgstr "Terminals werden nicht hier angelegt, sondern von Hobex geladen: Kassensystem / Konfiguration / Zahlungsmethoden, die hobex-Methode öffnen und auf Check Connection klicken."
+msgid ""
+"Terminals are not created here, they are loaded from Hobex: Point of Sale / "
+"Configuration / Payment Methods, open the Hobex method and click Check "
+"Connection."
+msgstr ""
+"Terminals werden nicht hier angelegt, sondern von Hobex geladen: "
+"Kassensystem / Konfiguration / Zahlungsmethoden, die hobex-Methode öffnen "
+"und auf Check Connection klicken."
 
 #. module: pos_hobex
 #: model:ir.model.fields.selection,name:pos_hobex.selection__pos_payment_method__hobex_terminal_mode__testing
@@ -973,20 +1156,32 @@ msgstr "Testmodus"
 #. module: pos_hobex
 #. odoo-javascript
 #: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
-msgid "The abort could not be sent to Hobex. Please cancel the payment directly on the terminal."
-msgstr "Der Abbruch konnte nicht an Hobex übermittelt werden. Bitte brechen Sie die Zahlung direkt am Terminal ab."
+msgid ""
+"The abort could not be sent to Hobex. Please cancel the payment directly on "
+"the terminal."
+msgstr ""
+"Der Abbruch konnte nicht an Hobex übermittelt werden. Bitte brechen Sie die "
+"Zahlung direkt am Terminal ab."
 
 #. module: pos_hobex
 #. odoo-javascript
 #: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
-msgid "The abort could not be sent to Hobex: %s Please cancel the payment directly on the terminal."
-msgstr "Der Abbruch konnte nicht an Hobex übermittelt werden: %s Bitte brechen Sie die Zahlung direkt am Terminal ab."
+msgid ""
+"The abort could not be sent to Hobex: %s Please cancel the payment directly "
+"on the terminal."
+msgstr ""
+"Der Abbruch konnte nicht an Hobex übermittelt werden: %s Bitte brechen Sie "
+"die Zahlung direkt am Terminal ab."
 
 #. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
-msgid "The abort function is not enabled for this Hobex account. Please ask Hobex to activate it."
-msgstr "Die Abbruch-Funktion ist für dieses hobex-Konto nicht freigeschaltet. Bitte wenden Sie sich an Hobex, um sie aktivieren zu lassen."
+msgid ""
+"The abort function is not enabled for this Hobex account. Please ask Hobex "
+"to activate it."
+msgstr ""
+"Die Abbruch-Funktion ist für dieses hobex-Konto nicht freigeschaltet. Bitte "
+"wenden Sie sich an Hobex, um sie aktivieren zu lassen."
 
 #. module: pos_hobex
 #: model:ir.model.fields,help:pos_hobex.field_pos_payment__hobex_refund_transaction_id
@@ -995,9 +1190,23 @@ msgstr "Die für diese Zahlung am Terminal gebuchte Gutschrift."
 
 #. module: pos_hobex
 #. odoo-javascript
+#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
+msgid ""
+"The payment is still running on the terminal. Please finish it there and "
+"press \"Send\" again to fetch the result."
+msgstr ""
+"Die Zahlung läuft noch am Terminal. Bitte am Terminal abschließen und danach"
+" erneut \"Senden\" drücken, um das Ergebnis abzuholen."
+
+#. module: pos_hobex
+#. odoo-javascript
 #: code:addons/pos_hobex/static/src/overrides/components/PaymentScreen/PaymentScreen.js:0
-msgid "The payment is still running. Please cancel it with \"Cancel\" or directly on the terminal."
-msgstr "Die Zahlung läuft noch. Bitte brechen Sie sie über \"Abbrechen\" oder direkt am Terminal ab."
+msgid ""
+"The payment is still running. Please cancel it with \"Cancel\" or directly "
+"on the terminal."
+msgstr ""
+"Die Zahlung läuft noch. Bitte brechen Sie sie über \"Abbrechen\" oder direkt"
+" am Terminal ab."
 
 #. module: pos_hobex
 #. odoo-javascript
@@ -1009,20 +1218,32 @@ msgstr "Die Zahlung war erfolgreich und kann nicht gelöscht werden."
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment.py:0
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
-msgid "The refund (Gutschrift) function is not enabled for this Hobex account. Please ask Hobex to activate it."
-msgstr "Die Gutschrift-Funktion ist für dieses Hobex Konto nicht freigeschaltet. Bitte lassen Sie sie von Hobex aktivieren."
+msgid ""
+"The refund (Gutschrift) function is not enabled for this Hobex account. "
+"Please ask Hobex to activate it."
+msgstr ""
+"Die Gutschrift-Funktion ist für dieses Hobex Konto nicht freigeschaltet. "
+"Bitte lassen Sie sie von Hobex aktivieren."
 
 #. module: pos_hobex
 #. odoo-javascript
 #: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
-msgid "The refund function is not enabled for this Hobex account. Please ask Hobex to activate it."
-msgstr "Die Gutschrift-Funktion ist für dieses hobex-Konto nicht freigeschaltet. Bitte wenden Sie sich an Hobex, um sie aktivieren zu lassen."
+msgid ""
+"The refund function is not enabled for this Hobex account. Please ask Hobex "
+"to activate it."
+msgstr ""
+"Die Gutschrift-Funktion ist für dieses hobex-Konto nicht freigeschaltet. "
+"Bitte wenden Sie sich an Hobex, um sie aktivieren zu lassen."
 
 #. module: pos_hobex
 #. odoo-javascript
 #: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
-msgid "The terminal does not seem to be reachable. Please check that it is connected to the network and try again."
-msgstr "Das Terminal scheint nicht erreichbar zu sein. Bitte überprüfen Sie die Verbindung des Terminals mit dem Netzwerk und versuchen Sie es erneut."
+msgid ""
+"The terminal does not seem to be reachable. Please check that it is "
+"connected to the network and try again."
+msgstr ""
+"Das Terminal scheint nicht erreichbar zu sein. Bitte überprüfen Sie die "
+"Verbindung des Terminals mit dem Netzwerk und versuchen Sie es erneut."
 
 #. module: pos_hobex
 #. odoo-javascript
@@ -1033,14 +1254,21 @@ msgstr "Die Transaktion wurde am Terminal abgebrochen."
 #. module: pos_hobex
 #: model:ir.model.fields,help:pos_hobex.field_res_config_settings__module_pos_hobex
 #: model_terms:ir.ui.view,arch_db:pos_hobex.res_config_settings_view_form_pos_hobex
-msgid "The transactions are processed by Hobex. Set your Hobex credentials on the related payment method."
-msgstr "Die Transaktionen werden von Hobex abgewickelt. Die hobex-Zugangsdaten werden bei der zugehörigen Zahlungsmethode hinterlegt."
+msgid ""
+"The transactions are processed by Hobex. Set your Hobex credentials on the "
+"related payment method."
+msgstr ""
+"Die Transaktionen werden von Hobex abgewickelt. Die hobex-Zugangsdaten "
+"werden bei der zugehörigen Zahlungsmethode hinterlegt."
 
 #. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment.py:0
-msgid "There was a communication error with Hobex. See the server log for details."
-msgstr "Es ist ein Kommunikationsfehler mit Hobex aufgetreten. Details finden Sie im Server-Log."
+msgid ""
+"There was a communication error with Hobex. See the server log for details."
+msgstr ""
+"Es ist ein Kommunikationsfehler mit Hobex aufgetreten. Details finden Sie im"
+" Server-Log."
 
 #. module: pos_hobex
 #. odoo-python
@@ -1057,21 +1285,19 @@ msgstr "Diese Methode ist nur für hobex-Zahlungsmethoden verfügbar."
 #. module: pos_hobex
 #. odoo-javascript
 #: code:addons/pos_hobex/static/src/overrides/components/TicketScreen/TicketScreen.js:0
-msgid "This order is a refund of another order. A refund cannot be refunded again. Open the original order to refund more of it."
-msgstr "Dieser Beleg ist bereits die Rückerstattung eines anderen Belegs. Eine Rückerstattung kann nicht erneut erstattet werden. Bitte den Originalbeleg öffnen."
+msgid ""
+"This order is a refund of another order. A refund cannot be refunded again. "
+"Open the original order to refund more of it."
+msgstr ""
+"Dieser Beleg ist bereits die Rückerstattung eines anderen Belegs. Eine "
+"Rückerstattung kann nicht erneut erstattet werden. Bitte den Originalbeleg "
+"öffnen."
 
 #. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment.py:0
 msgid "This payment was not made through a Hobex terminal."
 msgstr "Diese Zahlung wurde nicht über ein Hobex Terminal abgewickelt."
-
-#. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__tid
-msgid "TID"
-msgstr "TID"
 
 #. module: pos_hobex
 #. odoo-python
@@ -1088,8 +1314,12 @@ msgstr "Zeitüberschreitung beim Kontakt zu Hobex (%s)."
 #. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
-msgid "Timeout while contacting Hobex (%s). Please check your internet connection and try again."
-msgstr "Zeitüberschreitung beim Kontakt zu Hobex (%s). Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut."
+msgid ""
+"Timeout while contacting Hobex (%s). Please check your internet connection "
+"and try again."
+msgstr ""
+"Zeitüberschreitung beim Kontakt zu Hobex (%s). Bitte überprüfen Sie Ihre "
+"Internetverbindung und versuchen Sie es erneut."
 
 #. module: pos_hobex
 #: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_auth_token
@@ -1125,15 +1355,15 @@ msgid "Transaction ID: %s"
 msgstr "Transaktions-ID: %s"
 
 #. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__transaction_type
+msgid "Transaction Type"
+msgstr "Transaktionsart"
+
+#. module: pos_hobex
 #. odoo-python
 #: code:addons/pos_hobex/models/pos_payment_method.py:0
 msgid "Transaction not found"
 msgstr "Transaktion nicht gefunden"
-
-#. module: pos_hobex
-#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_hobex_transaction__transaction_type
-msgid "Transaction Type"
-msgstr "Transaktionsart"
 
 #. module: pos_hobex
 #: model:ir.model.constraint,message:pos_hobex.constraint_pos_payment_hobex_transaction_transactionid_tid_uniq
@@ -1160,8 +1390,7 @@ msgid "User"
 msgstr "Benutzer"
 
 #. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/xml/ReceiptScreen/OrderReceipt.xml:0
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_order_receipt
 msgid "VOID"
 msgstr "STORNO"
 
@@ -1171,13 +1400,33 @@ msgid "VU Number"
 msgstr "VU-Nummer"
 
 #. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
-msgid "The payment is still running on the terminal. Please finish it there and press \"Send\" again to fetch the result."
-msgstr "Die Zahlung läuft noch am Terminal. Bitte am Terminal abschließen und danach erneut \"Senden\" drücken, um das Ergebnis abzuholen."
+#: model:ir.model,name:pos_hobex.model_ir_ui_view
+msgid "View"
+msgstr "Ansicht"
 
 #. module: pos_hobex
-#. odoo-javascript
-#: code:addons/pos_hobex/static/src/app/payment_hobex.js:0
-msgid "No answer from Hobex - the state of the reversal is unknown. Please check the transaction in the Hobex portal."
-msgstr "Keine Antwort von hobex - der Status des Stornos ist unbekannt. Bitte prüfen Sie die Transaktion im hobex-Portal."
+#. odoo-python
+#: code:addons/pos_hobex/models/pos_payment.py:0
+msgid "no response from Hobex"
+msgstr "keine Antwort von Hobex"
+
+#. module: pos_hobex
+#: model_terms:ir.ui.view,arch_db:pos_hobex.pos_payment_method_view_form_hobex
+msgid "3. Point of Sale"
+msgstr "3. Kasse"
+
+#. module: pos_hobex
+#: model:ir.model.fields,field_description:pos_hobex.field_pos_payment_method__hobex_auto_start
+msgid "Start payment automatically"
+msgstr "Zahlung automatisch starten"
+
+#. module: pos_hobex
+#: model:ir.model.fields,help:pos_hobex.field_pos_payment_method__hobex_auto_start
+msgid ""
+"Send the payment to the terminal as soon as the Hobex payment line is added."
+" When off, the cashier can adjust the amount first and starts the payment "
+"with Send. Refunds always wait for Refund."
+msgstr ""
+"Die Zahlung wird an das Terminal gesendet, sobald die Hobex-Zahlungszeile "
+"angelegt wird. Ist die Option aus, kann zuerst der Betrag angepasst werden; "
+"gestartet wird mit „Senden“. Rückerstattungen warten immer auf „Rückerstattung“."

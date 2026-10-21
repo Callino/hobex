@@ -14,7 +14,7 @@ POS hobex Terminal Integration
     :target: http://www.gnu.org/licenses/agpl-3.0-standalone.html
     :alt: License: AGPL-3
 .. |badge3| image:: https://img.shields.io/badge/github-Callino%2Fhobex-lightgray.png?logo=github
-    :target: https://github.com/Callino/hobex/tree/19.0/pos_hobex
+    :target: https://github.com/Callino/hobex/tree/20.0/pos_hobex
     :alt: Callino/hobex
 
 |badge1| |badge2| |badge3|
@@ -31,14 +31,14 @@ https://online.hobex.at/login
 Installation
 ============
 
-Variante A – über die Anbieter-Karten (empfohlen ab Odoo 19)
--------------------------------------------------------------
+Variante A – über die Anbieter-Karten (empfohlen)
+-------------------------------------------------
 * Das Modul installieren
 * Kassensystem -> Konfiguration -> Zahlungsmethoden -> Neue Zahlungsmethode
 * In der Kachel-Übersicht (rechts) die ``Hobex``-Karte mit *Aktivieren* bzw.
   bei bereits installiertem Modul mit *Setup* anklicken – das Feld
-  *Integration* wird automatisch auf ``Terminal`` und *Zahlungsterminal*
-  auf ``Hobex`` gesetzt.
+  *Integration* wird automatisch auf ``Terminal`` und *Integrate with*
+  (Zahlungsanbieter) auf ``Hobex`` gesetzt.
 * Ein Bank-Journal auswählen oder ein neues anlegen
 * Weiter mit den Schritten unter *Einrichtung der hobex-Verbindung*.
 
@@ -48,8 +48,8 @@ Variante B – manuell
 * Kassensystem -> Konfiguration -> Zahlungsmethoden -> Neue Zahlungsmethode
 * Ein Bank-Journal auswählen oder ein neues anlegen
 * Im Feld *Integration* den Wert ``Terminal`` auswählen
-  (ohne diesen Schritt erscheint *Zahlungsterminal* nicht!)
-* Im Feld *Zahlungsterminal* ``Hobex`` auswählen
+  (ohne diesen Schritt erscheint *Integrate with* nicht!)
+* Im Feld *Integrate with* ``Hobex`` auswählen
 * Weiter mit den Schritten unter *Einrichtung der hobex-Verbindung*.
 
 Einrichtung der hobex-Verbindung
@@ -74,15 +74,22 @@ Die geladenen Terminals sind auch über Kassensystem -> Konfiguration ->
 
 Verhalten an der Kasse
 ======================
+* Die Zahlung startet wie bisher sofort, sobald die hobex-Zeile angelegt wird
+  (Odoo 20 macht das im Kern nur noch für Bank-QR-Codes, das Modul stellt das
+  bisherige Verhalten wieder her). Abschaltbar pro Zahlungsmethode unter
+  *3. Point of Sale* → *Start payment automatically*: dann kann der Betrag
+  zuerst angepasst werden (Teilzahlung), gestartet wird mit *Send*.
+  Retouren starten in beiden Fällen erst mit *Refund*.
 * Hobex-Zahlungen werden über das Terminal abgewickelt; der Knopf
   *Force done* (Erledigt erzwingen) wird auf hobex-Zahlungszeilen
   ausgeblendet – nicht erfolgreiche Buchungen müssen am Terminal bzw.
   durch *Cancel* abgebrochen werden.
 * Bei einer erfolgreichen Buchung werden TID, Belegnummer, Karte, PAN,
   Autorisierungscode, AID und Antwortcode auf dem Kassenbon gedruckt.
-* Bei Belegen mit Unterschriftspflicht (``cvm == 1``) wird – falls ein
-  Drucker am IoT-Proxy angebunden ist – ein separater Händlerbeleg
-  gedruckt.
+* Bei Belegen mit Unterschriftspflicht (``cvm == 1``) wird – falls für die
+  Kasse ein Bondrucker eingerichtet ist – ein separater Händlerbeleg
+  gedruckt. Ohne Bondrucker entfällt er (kein Browser-Druckdialog mitten in
+  der Zahlung); die Unterschriftszeile steht ohnehin auf dem Kassenbon.
 
 Gutschrift (Refund)
 ===================
@@ -116,10 +123,9 @@ Im Backend
 
 Storno nach dem Kassieren ist ein Sonderfall
 --------------------------------------------
-An der Kasse ist das Storno nur vor dem Validieren des Belegs erreichbar
-(Button *Reverse* auf der Zahlungszeile). Danach bietet Odoo nur noch die
-Retoure an — der Kern kennt für abgeschlossene Belege keinen Stornoweg, und
-das Flag ``can_be_reversed`` lebt ausschließlich im Browser.
+An der Kasse gibt es seit Odoo 20 keinen Stornoweg mehr: der Kern hat das
+Zurücknehmen einer Terminal-Zahlungszeile (*Reverse*) entfernt. Nach dem
+Kassieren bietet Odoo nur noch die Retoure an.
 
 Der Backend-Button storniert zwar weiterhin bis zum Tagesabschluss, **erzeugt
 aber keinen Gegenbeleg in Odoo**: Betrag der Zahlungszeile, Belegstatus,

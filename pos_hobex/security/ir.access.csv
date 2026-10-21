@@ -1,0 +1,5 @@
+id,name,model_id,group_id/id,operation,domain
+access_pos_payment_hobex_transaction,access_pos_payment_hobex_transaction,pos.payment.hobex.transaction,account.group_account_manager,crud,
+access_pos_payment_hobex_transaction_pos_manager,access_pos_payment_hobex_transaction_pos_manager,pos.payment.hobex.transaction,point_of_sale.group_pos_manager,r,
+access_hobex_terminal_manager,access_hobex_terminal_manager,hobex.terminal,base.group_erp_manager,crud,
+access_hobex_terminal_pos_manager,access_hobex_terminal_pos_manager,hobex.terminal,point_of_sale.group_pos_manager,r,

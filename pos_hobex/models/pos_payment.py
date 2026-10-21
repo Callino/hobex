@@ -57,7 +57,7 @@ class PosPayment(models.Model):
         """
         self.ensure_one()
         method_sudo = self.payment_method_id.sudo()
-        if method_sudo.use_payment_terminal != 'hobex':
+        if method_sudo.payment_provider != 'hobex':
             raise UserError(_('This payment was not made through a Hobex terminal.'))
         if self.hobex_refund_transaction_id:
             raise UserError(_('A credit was already booked for this payment on %s.')

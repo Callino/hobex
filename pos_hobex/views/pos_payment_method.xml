@@ -12,7 +12,7 @@
                 Anchor on the outer 'Payment methods' group so our content
                 sits BELOW it as a full-width block, instead of being
                 shoehorned into the right-hand column next to
-                use_payment_terminal.
+                payment_provider.
                 -->
                 <!-- The transaction log is a list of its own, not a block at the
                      bottom of the configuration form: a stat button keeps the form
@@ -20,7 +20,7 @@
                      one click. -->
                 <xpath expr="//div[hasclass('oe_title')]/.." position="before">
                     <div class="oe_button_box" name="button_box"
-                         invisible="use_payment_terminal != 'hobex'">
+                         invisible="payment_provider != 'hobex'">
                         <button name="action_view_hobex_transactions" type="object"
                                 class="oe_stat_button" icon="fa-exchange">
                             <field name="hobex_transaction_count" widget="statinfo"
@@ -30,7 +30,7 @@
                 </xpath>
 
                 <xpath expr="//group[@name='Payment methods']" position="after">
-                    <group name="hobex" invisible="use_payment_terminal != 'hobex'">
+                    <group name="hobex" invisible="payment_provider != 'hobex'">
 
                         <!-- Hidden helpers -->
                         <field name="hobex_connected" invisible="1"/>
@@ -195,6 +195,13 @@
                             <field name="hobex_terminal_ids" nolabel="1" colspan="2"
                                    readonly="1" groups="base.group_no_one"
                                    invisible="not hobex_terminal_ids"/>
+                        </group>
+
+                        <!-- Step 3 - behaviour at the till. -->
+                        <group string="3. Point of Sale" colspan="2">
+                            <group>
+                                <field name="hobex_auto_start"/>
+                            </group>
                         </group>
 
                         <!-- Account capabilities as reported by

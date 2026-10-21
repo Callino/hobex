@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError, AccessDenied
+from odoo.tools import BinaryBytes, file_open
 import json
 import requests
 from urllib.parse import urljoin
@@ -14,8 +15,33 @@ _logger = logging.getLogger(__name__)
 class PosPaymentMethod(models.Model):
     _inherit = 'pos.payment.method'
 
-    def _get_payment_terminal_selection(self):
-        return super()._get_payment_terminal_selection() + [('hobex', 'HOBEX')]
+    HOBEX_LOGO_PATH = 'pos_hobex/static/src/img/hobex_logo_3.png'
+
+    def _get_terminal_provider_selection(self):
+        return super()._get_terminal_provider_selection() + [('hobex', 'HOBEX')]
+
+    @api.model
+    def get_payment_providers(self):
+        # Puts the Hobex card into the provider grid of the payment method
+        # form. The grid takes its logos from point_of_sale/static/img/providers,
+        # so the card carries its own (see pos_payment_provider_cards.xml).
+        return super().get_payment_providers() + [{
+            'type': 'terminal',
+            'provider': 'hobex',
+            'module': 'pos_hobex',
+            'name': 'Hobex',
+            'logo_url': '/' + self.HOBEX_LOGO_PATH,
+        }]
+
+    @api.depends('payment_provider', 'custom_image')
+    def _compute_image(self):
+        # Core looks the provider logo up in point_of_sale itself and finds
+        # nothing for Hobex, which leaves the button in the POS without one.
+        super()._compute_image()
+        for method in self:
+            if method.payment_provider == 'hobex' and not method.custom_image:
+                with file_open(self.HOBEX_LOGO_PATH, 'rb') as image:
+                    method.image = BinaryBytes(image.read())
 
     @api.depends('hobex_terminal_mode')
     def _compute_hobex_terminal_address(self):
@@ -63,18 +89,26 @@ class PosPaymentMethod(models.Model):
                 ('payment_method_ids', 'in', method.id),
             ])
 
-    @api.depends('hobex_auth_token', 'use_payment_terminal')
+    @api.depends('hobex_auth_token', 'payment_provider')
     def _compute_hobex_connected(self):
         # hobex_auth_token is group-restricted; read it via sudo so the compute
         # still resolves for users that don't have base.group_erp_manager.
         for method in self.sudo():
-            method.hobex_connected = bool(method.use_payment_terminal == 'hobex' and method.hobex_auth_token)
+            method.hobex_connected = bool(method.payment_provider == 'hobex' and method.hobex_auth_token)
 
     hobex_terminal_id = fields.Char('Terminal ID')
     hobex_terminal_mode = fields.Selection([
         ('testing', "Testmode"),
         ('production', "Production"),
     ], required=True, default='production', string="Terminal Mode")
+    # Up to Odoo 19 the core sent a terminal line to the terminal as soon as it
+    # was added; Odoo 20 waits for Send. Kept switchable so a till that needs to
+    # change the amount first (split payments) can opt out.
+    hobex_auto_start = fields.Boolean(
+        'Start payment automatically', default=True,
+        help="Send the payment to the terminal as soon as the Hobex payment line "
+             "is added. When off, the cashier can adjust the amount first and "
+             "starts the payment with Send. Refunds always wait for Refund.")
     hobex_api_address = fields.Char('Terminal Address', compute='_compute_hobex_terminal_address', store=True)
     # Credentials: restricted to ERP managers so a POS cashier with read access
     # to pos.payment.method cannot exfiltrate them. POS-facing methods below
@@ -117,15 +151,15 @@ class PosPaymentMethod(models.Model):
     @api.model
     def _load_pos_data_fields(self, config):
         params = super()._load_pos_data_fields(config)
-        params += ['hobex_terminal_id']
+        params += ['hobex_terminal_id', 'hobex_auto_start']
         return params
 
-    @api.constrains('use_payment_terminal', 'hobex_terminal_id', 'hobex_user', 'hobex_pass')
+    @api.constrains('payment_provider', 'hobex_terminal_id', 'hobex_user', 'hobex_pass')
     def _check_required_if_hobex(self):
         # sudo: hobex_user / hobex_pass are restricted to base.group_erp_manager,
         # so reading them here would raise for anyone else editing the record.
         for method in self.sudo():
-            if method.use_payment_terminal != 'hobex':
+            if method.payment_provider != 'hobex':
                 continue
             missing = []
             if not method.hobex_user:
@@ -146,7 +180,7 @@ class PosPaymentMethod(models.Model):
     @api.model
     def hobex_cron_renew_auth(self):
         for method in self.search([
-            ('use_payment_terminal', '=', 'hobex'),
+            ('payment_provider', '=', 'hobex'),
             ('hobex_user', '!=', False),
             ('hobex_pass', '!=', False),
         ]):
@@ -517,7 +551,7 @@ class PosPaymentMethod(models.Model):
 
     def hobex_new_transaction(self, amount, currency, reference, transaction_id, kind='payment'):
         self.ensure_one()
-        if self.use_payment_terminal != 'hobex':
+        if self.payment_provider != 'hobex':
             raise UserError(_('This method is only available for Hobex payment methods.'))
         if not self.hobex_terminal_id:
             # The form-level constraint lets a half-configured method be saved
@@ -546,7 +580,7 @@ class PosPaymentMethod(models.Model):
 
     def _get_hobex_headers(self):
         self.ensure_one()
-        if self.use_payment_terminal != 'hobex':
+        if self.payment_provider != 'hobex':
             raise UserError(_('This method is only available for Hobex payment methods.'))
         return {
             # hobex_auth_token is group-restricted; sudo() lets POS callers
@@ -557,7 +591,7 @@ class PosPaymentMethod(models.Model):
 
     def hobex_start_sync_transaction(self, transaction_id):
         self.ensure_one()
-        if self.use_payment_terminal != 'hobex':
+        if self.payment_provider != 'hobex':
             raise UserError(_('This method is only available for Hobex payment methods.'))
         # New cursor needed to read the transaction created above in another cursor
         response = None
@@ -632,7 +666,7 @@ class PosPaymentMethod(models.Model):
 
     def hobex_reversal_transaction(self, transactionId):
         self.ensure_one()
-        if self.use_payment_terminal != 'hobex':
+        if self.payment_provider != 'hobex':
             raise UserError(_('This method is only available for Hobex payment methods.'))
         url = urljoin(self.hobex_api_address, "/api/transaction/payment/%s/%s" % (self.hobex_terminal_id, transactionId))
         try:
@@ -669,7 +703,7 @@ class PosPaymentMethod(models.Model):
         and a second writer would race it.
         """
         self.ensure_one()
-        if self.use_payment_terminal != 'hobex':
+        if self.payment_provider != 'hobex':
             raise UserError(_('This method is only available for Hobex payment methods.'))
         url = urljoin(self.hobex_api_address, "/api/transaction/abort/%s/%s" % (
             self.hobex_terminal_id, transaction_id))

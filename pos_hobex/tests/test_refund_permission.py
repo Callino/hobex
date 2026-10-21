@@ -19,8 +19,9 @@ class TestHobexRefundPermission(TransactionCase):
         super().setUpClass()
         cls.method = cls.env['pos.payment.method'].create({
             'name': 'hobex Test',
+            'type': 'bank',
             'payment_method_type': 'terminal',
-            'use_payment_terminal': 'hobex',
+            'payment_provider': 'hobex',
             'hobex_terminal_id': '3512285',
             'hobex_user': 'user',
             'hobex_pass': 'secret',

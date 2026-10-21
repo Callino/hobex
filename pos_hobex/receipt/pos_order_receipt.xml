@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <data>
+        <!-- The receipt is rendered from the same template on the server and in
+             the POS (converted to Owl there), so the expressions stay within what
+             both understand: dict access, ==, and/or/not. The payment dicts carry
+             every stored pos.payment field, the hobex_* ones included. -->
+        <template id="pos_hobex.pos_order_receipt" inherit_id="point_of_sale.pos_order_receipt">
+            <xpath expr="//t[@name='payments']/tr" position="after">
+                <t t-if="payment.get('hobex_transactionId')">
+                    <tr t-if="payment.get('hobex_tid')" class="payment-line">
+                        <td class="text-start w-70 text-small">TID</td>
+                        <td class="text-end w-30 text-small font-monospace" t-out="payment['hobex_tid']"/>
+                    </tr>
+                    <tr t-if="payment.get('hobex_receipt')" class="payment-line">
+                        <td class="text-start w-70 text-small">Receipt#</td>
+                        <td class="text-end w-30 text-small font-monospace" t-out="payment['hobex_receipt']"/>
+                    </tr>
+                    <tr t-if="payment.get('hobex_cardIssuer')" class="payment-line">
+                        <td class="text-start w-70 text-small">Card</td>
+                        <td class="text-end w-30 text-small" t-out="payment['hobex_cardIssuer']"/>
+                    </tr>
+                    <tr t-if="payment.get('hobex_cardNumber')" class="payment-line">
+                        <td class="text-start w-70 text-small">PAN</td>
+                        <td class="text-end w-30 text-small font-monospace" t-out="payment['hobex_cardNumber']"/>
+                    </tr>
+                    <tr t-if="payment.get('hobex_transactionType') == 'SELL'" class="payment-line">
+                        <td class="text-start w-70 text-small">PURCHASE</td>
+                        <td class="text-end w-30 text-small font-monospace" t-out="payment['amount']"/>
+                    </tr>
+                    <tr t-if="payment.get('hobex_transactionType') == 'VOID'" class="payment-line">
+                        <td class="text-start w-70 text-small">VOID</td>
+                        <td class="text-end w-30 text-small font-monospace" t-out="payment['amount']"/>
+                    </tr>
+                    <tr t-if="payment.get('hobex_approvalCode')" class="payment-line">
+                        <td class="text-start w-70 text-small">Approval code</td>
+                        <td class="text-end w-30 text-small font-monospace" t-out="payment['hobex_approvalCode']"/>
+                    </tr>
+                    <tr t-if="payment.get('hobex_aid')" class="payment-line">
+                        <td class="text-start w-70 text-small">AID</td>
+                        <td class="text-end w-30 text-small font-monospace" t-out="payment['hobex_aid']"/>
+                    </tr>
+                    <tr t-if="payment.get('hobex_approvalCode')" class="payment-line">
+                        <td class="text-start w-70 text-small">RC: <t t-out="payment['hobex_responseCode']"/></td>
+                        <td class="text-end w-30 text-small" t-out="payment['hobex_responseText']"/>
+                    </tr>
+                    <tr t-if="payment.get('hobex_actionCode')" class="payment-line">
+                        <td class="text-start w-70 text-small">Crypto</td>
+                        <td class="text-end w-30 text-small font-monospace" t-out="payment['hobex_actionCode']"/>
+                    </tr>
+                    <!-- hobex_cvm is a Char on the server ('1') but arrives as the
+                         number 1 from Hobex in the POS; == on '1' matches both,
+                         since the POS side compiles it to loose JS equality. -->
+                    <tr t-if="payment.get('hobex_cvm') == '1'" class="payment-line">
+                        <td colspan="2" class="text-center text-small">
+                            <div>Signature</div>
+                            <div style="width:100%;border-bottom:1px dotted;height:2cm;"/>
+                        </td>
+                    </tr>
+                </t>
+            </xpath>
+        </template>
+
+        <!-- The receipt Hobex sends along when the card asks for a signature
+             (CVM = 1). Printed on its own, right after the payment, so the
+             customer can sign it before the order is validated. -->
+        <template id="pos_hobex.hobex_cvm_receipt">
+            <html id="pos-receipt">
+                <head>
+                    <meta charset="UTF-8"></meta>
+                    <t t-call="point_of_sale.pos_order_receipt_style"/>
+                </head>
+                <body>
+                    <div class="pos-receipt">
+                        <div class="pos-payment-terminal-receipt">
+                            <pre t-out="extra_data['receipt']" style="font-family: inherit;"/>
+                        </div>
+                    </div>
+                </body>
+            </html>
+        </template>
+    </data>
+</odoo>

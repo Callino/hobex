@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <templates>
+    <!-- Core takes every provider logo from point_of_sale/static/img/providers;
+         Hobex brings its own (logo_url, see get_payment_providers). -->
     <t t-name="pos_hobex.PosPaymentProviderCards" t-inherit="point_of_sale.PosPaymentProviderCards" t-inherit-mode="extension">
         <xpath expr="//img[hasclass('img')]" position="attributes">
-            <attribute name="t-att-src">provider.logo_url || `/point_of_sale/static/img/providers/${provider.selection}.png`</attribute>
+            <attribute name="t-att-src">provider.logo_url || `/point_of_sale/static/img/providers/${provider.provider}.png`</attribute>
         </xpath>
     </t>
 </templates>

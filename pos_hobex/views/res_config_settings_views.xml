@@ -10,7 +10,7 @@
             the POS settings page. The same pattern as Adyen / Stripe / Tyro /
             etc.: a `module_pos_*` boolean toggles install/uninstall, and the
             arrow button opens the matching payment-method form pre-filtered
-            on use_payment_terminal='hobex'.
+            on payment_provider='hobex'.
             -->
             <xpath expr="//block[@id='pos_payment_terminals_section']" position="inside">
                 <setting title="The transactions are processed by Hobex. Set your Hobex credentials on the related payment method."

@@ -75,7 +75,7 @@ patch(TicketScreen.prototype, {
     _hasHobexCardPayment(order) {
         return (order.payment_ids || []).some(
             (payment) =>
-                payment.payment_method_id?.use_payment_terminal === "hobex" && payment.amount > 0
+                payment.payment_method_id?.payment_provider === "hobex" && payment.amount > 0
         );
     },
 });

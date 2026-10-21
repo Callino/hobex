@@ -78,7 +78,7 @@ See ``README.rst`` for the step-by-step installation guide. In short:
 4. Fill in Hobex user and password, choose Test- or Production-Mode and click
    *Check Connection*, then pick the terminal from the list it loaded.
 """,
-    'version': '19.0.1.3.0',
+    'version': '20.0.1.3.0',
     'category': 'Point of Sale',
     'sequence': 6,
     'website': 'https://github.com/Callino/hobex',
@@ -86,13 +86,14 @@ See ``README.rst`` for the step-by-step installation guide. In short:
     "license": "AGPL-3",
     'depends': ['point_of_sale'],
     'data': [
-        'security/ir.model.access.csv',
+        'security/ir.access.csv',
         'views/hobex_terminal.xml',
         'views/pos_payment_hobex_transaction.xml',
         'views/pos_payment_method.xml',
         'views/pos_payment.xml',
         'views/res_config_settings_views.xml',
         'data/cron.xml',
+        'receipt/pos_order_receipt.xml',
     ],
     'images': [
         'static/description/banner.png',
@@ -101,7 +102,6 @@ See ``README.rst`` for the step-by-step installation guide. In short:
         'point_of_sale._assets_pos': [
             'pos_hobex/static/src/app/**/*',
             'pos_hobex/static/src/overrides/**/*',
-            'pos_hobex/static/src/xml/**/*',
         ],
         'web.assets_backend': [
             'pos_hobex/static/src/backend/**/*',

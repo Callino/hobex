@@ -1,13 +1,10 @@
 /* Hobex payment api */
 import { _t } from "@web/core/l10n/translation";
 import { PaymentInterface } from "@point_of_sale/app/utils/payment/payment_interface";
-import { register_payment_method } from "@point_of_sale/app/services/pos_store";
+import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { registry } from "@web/core/registry";
 
 export class PaymentHobex extends PaymentInterface {
-    setup() {
-        super.setup(...arguments);
-        this.supports_reversals = true;
-    }
 
     /**
      * Updates the payment line values by appending data from the result object,
@@ -30,30 +27,35 @@ export class PaymentHobex extends PaymentInterface {
         line.hobex_responseCode = result.responseCode;
         line.hobex_responseText = result.responseText;
         line.hobex_cvm = result.cvm;
-        if (result.cvm === 1 && this.pos.hardwareProxy?.printer && result.cvm_receipt) {
-            this.print_hobex_receipt(result.cvm_receipt);
+        if (result.cvm === 1 && this.pos.ticketPrinter.hasReceiptPrinters && result.cvm_receipt) {
+            this.print_hobex_receipt(result.cvm_receipt).catch((error) =>
+                console.warn("Hobex signature receipt could not be printed", error)
+            );
         }
     }
 
-    print_hobex_receipt(receipt) {
-        // Convert *any* line terminator (CRLF, LF, or bare CR) to <br/> so a
-        // Hobex receipt returned with Unix line endings still prints with
-        // line breaks instead of one squashed line.
-        const body = receipt.replace(/\r\n|\r|\n/g, "<br/>");
-        const htmlString =
-            `<div class='pos-receipt'>` +
-                `<div class='pos-payment-terminal-receipt'>${body}</div>` +
-            `</div>`;
-        const tempDiv = document.createElement("div");
-        tempDiv.innerHTML = htmlString;
-        // firstElementChild skips any stray TextNode (whitespace/comments),
-        // so the printer always gets the receipt <div> even if someone
-        // reformats the template literal above.
-        const element = tempDiv.firstElementChild;
-        if (!element) {
-            return;
-        }
-        this.pos.hardwareProxy.printer.printReceipt(element);
+    /**
+     * Print the signature receipt Hobex returned for a CVM = signature card.
+     *
+     * Only on a receipt printer: falling back to the browser print dialog in
+     * the middle of a payment would block the till. The <pre> in the template
+     * keeps Hobex's line breaks, whatever terminator they come with.
+     */
+    async print_hobex_receipt(receipt) {
+        const printer = this.pos.ticketPrinter;
+        const iframe = await printer.generateIframe("pos_hobex.hobex_cvm_receipt", {
+            extra_data: { receipt },
+        });
+        await printer.printWithFallback({ iframe, webFallback: false });
+    }
+
+    /**
+     * Tell the cashier something in a dialog.
+     *
+     * @param {{title: string, body: string}} error
+     */
+    _hobex_show_error({ title, body }) {
+        this.dialog.add(AlertDialog, { title, body });
     }
 
     _hobex_handle_payment_request_done(line, resolve, response) {
@@ -97,26 +99,26 @@ export class PaymentHobex extends PaymentInterface {
             // HTTP 403 from Hobex: the account is not cleared for this
             // operation. In practice this is the refund (Gutschrift)
             // function, which Hobex enables per account.
-            this.pos.env.bus.trigger("hobex_error", {
+            this._hobex_show_error({
                 title: _t("Hobex refund not enabled"),
                 body: _t(
                     "The refund function is not enabled for this Hobex account. Please ask Hobex to activate it."
                 ),
             });
         } else if (response.responseCode === "8004") {
-            this.pos.env.bus.trigger("hobex_error", {
+            this._hobex_show_error({
                 title: _t("Hobex"),
                 body: _t("The transaction was aborted at the terminal."),
             });
         } else if (response.responseCode === "8003") {
-            this.pos.env.bus.trigger("hobex_error", {
+            this._hobex_show_error({
                 title: _t("Hobex device error"),
                 body: _t(
                     "The terminal does not seem to be reachable. Please check that it is connected to the network and try again."
                 ),
             });
         } else {
-            this.pos.env.bus.trigger("hobex_error", {
+            this._hobex_show_error({
                 title: _t("Hobex response"),
                 body: response.responseCode + ": " + response.responseText,
             });
@@ -139,7 +141,7 @@ export class PaymentHobex extends PaymentInterface {
     _hobex_handle_payment_request_failure(line, resolve) {
         // Network failure or odoo exception
         line.setPaymentStatus("retry");
-        this.pos.env.bus.trigger("hobex_error", {
+        this._hobex_show_error({
             title: _t("Hobex error"),
             body: _t("A communication error with the Odoo / Hobex server occurred."),
         });
@@ -149,10 +151,9 @@ export class PaymentHobex extends PaymentInterface {
     /**
      * @override
      */
-    async sendPaymentRequest(uuid) {
+    async sendPaymentRequest(line) {
         await super.sendPaymentRequest(...arguments);
-        const order = this.pos.getOrder();
-        const line = order.payment_ids.find((paymentLine) => paymentLine.uuid === uuid);
+        const order = line.pos_order_id;
         // A negative payment line is a refund order: book a standalone credit
         // (Gutschrift) via /api/transaction/refund. Hobex needs no reference to
         // the original sale for that, but it does want a positive amount — the
@@ -227,12 +228,11 @@ export class PaymentHobex extends PaymentInterface {
      *
      * @override
      */
-    sendPaymentCancel(order, uuid) {
-        const line = order.payment_ids.find((paymentLine) => paymentLine.uuid === uuid);
+    async sendPaymentCancel(line) {
         if (!line || !line.transaction_id) {
             // Nothing was started on the terminal yet, so there is nothing to
             // abort and the line can be released right away.
-            return Promise.resolve(true);
+            return true;
         }
         return this.pos.data
             .silentCall("pos.payment.method", "proxy_hobex_abort_request", [
@@ -246,7 +246,7 @@ export class PaymentHobex extends PaymentInterface {
                     // transaction, ...). Passing that through is the difference
                     // between "try again" and "walk over to the terminal", so
                     // show it instead of swallowing it.
-                    this.pos.env.bus.trigger("hobex_error", {
+                    this._hobex_show_error({
                         title: _t("Hobex abort failed"),
                         body: response?.message
                             ? _t(
@@ -268,14 +268,14 @@ export class PaymentHobex extends PaymentInterface {
     }
 
     _hobex_handle_status_connection_failure(line, resolve, data = {}) {
-        // Bound as the `.catch` handler for the status/reversal silentCalls.
+        // Bound as the `.catch` handler for the status silentCalls.
         // We must resolve(false) here — otherwise the outer Promise created
-        // in _hobex_update_payment_status / sendPaymentReversal hangs forever
+        // in _hobex_update_payment_status / _hobex_poll_after_no_answer hangs forever
         // (silentCall never rejects today, but a future switch to `call`
         // would land us here). We also avoid `Promise.reject(...)` which
         // would surface as an "Uncaught (in promise)" warning since we have
         // no further `.catch` downstream.
-        this.pos.env.bus.trigger("hobex_error", {
+        this._hobex_show_error({
             title: _t("Hobex error"),
             body: _t(data && data.message ? data.message : "A communication error with the Odoo / Hobex server occurred."),
         });
@@ -287,7 +287,7 @@ export class PaymentHobex extends PaymentInterface {
         // silentCall returns `false` on any failure; treat that as a
         // connection error instead of crashing on response.error.
         if (!response) {
-            this.pos.env.bus.trigger("hobex_error", {
+            this._hobex_show_error({
                 title: _t("Hobex error"),
                 body: _t("A communication error with the Odoo / Hobex server occurred."),
             });
@@ -300,7 +300,7 @@ export class PaymentHobex extends PaymentInterface {
                 // The state of the transaction is still unknown - keep it and
                 // let the cashier ask again instead of freeing the line for a
                 // new transaction.
-                this.pos.env.bus.trigger("hobex_error", {
+                this._hobex_show_error({
                     title: _t("Hobex"),
                     body: response.message,
                 });
@@ -313,7 +313,7 @@ export class PaymentHobex extends PaymentInterface {
                 line.transaction_id = null;
                 // Say why the line went back to "retry" - otherwise the
                 // press of "Send" looks like it did nothing.
-                this.pos.env.bus.trigger("hobex_error", {
+                this._hobex_show_error({
                     title: _t("Hobex"),
                     // Already translated on the server.
                     body: response.message,
@@ -341,7 +341,7 @@ export class PaymentHobex extends PaymentInterface {
                 // payment the customer is about to complete, so keep waiting.
                 // Say so: core shows the line as "Transaction cancelled" once
                 // this resolves falsy, which reads like a failed payment.
-                this.pos.env.bus.trigger("hobex_error", {
+                this._hobex_show_error({
                     title: _t("Hobex"),
                     body: _t(
                         'The payment is still running on the terminal. Please finish it there and press "Send" again to fetch the result.'
@@ -387,55 +387,6 @@ export class PaymentHobex extends PaymentInterface {
                 .catch(this._hobex_handle_status_connection_failure.bind(this, line, resolve));
         });
     }
-
-    _hobex_handle_reversal_response(line, resolve, response) {
-        // silentCall returns `false` on any failure; treat that as a
-        // connection error instead of crashing on response.responseCode.
-        if (!response) {
-            // The reversal may or may not have reached Hobex - the line stays
-            // paid, but the cashier has to check the real state.
-            this.pos.env.bus.trigger("hobex_error", {
-                title: _t("Hobex"),
-                body: _t(
-                    "No answer from Hobex - the state of the reversal is unknown. Please check the transaction in the Hobex portal."
-                ),
-            });
-            line.setPaymentStatus("done");
-            resolve(false);
-            return;
-        }
-        line["hobex_responseCode"] = response.responseCode;
-        if (response.responseCode === "0") {
-            line.setPaymentStatus("reversed");
-            this.update_payment_line_values_from_hobex(line, response);
-            resolve(true);
-        } else {
-            this.pos.env.bus.trigger("hobex_error", {
-                title: _t("Hobex response"),
-                body: _t(response.responseCode + ": " + response.responseText),
-            });
-            resolve(false);
-        }
-    }
-
-    /**
-     * @override
-     */
-    sendPaymentReversal(uuid) {
-        super.sendPaymentReversal(...arguments);
-        const order = this.pos.getOrder();
-        const line = order.payment_ids.find((paymentLine) => paymentLine.uuid === uuid);
-        line.setPaymentStatus("reversing");
-        return new Promise((resolve) => {
-            this.pos.data
-                .silentCall("pos.payment.method", "proxy_hobex_reversal_request", [
-                    [this.payment_method_id.id],
-                    line.transaction_id,
-                ])
-                .then(this._hobex_handle_reversal_response.bind(this, line, resolve))
-                .catch(this._hobex_handle_status_connection_failure.bind(this, line, resolve));
-        });
-    }
 }
 
-register_payment_method("hobex", PaymentHobex);
+registry.category("pos_payment_providers").add("hobex", PaymentHobex);
