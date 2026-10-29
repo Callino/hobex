@@ -14,7 +14,7 @@ POS hobex Terminal Integration
     :target: http://www.gnu.org/licenses/agpl-3.0-standalone.html
     :alt: License: AGPL-3
 .. |badge3| image:: https://img.shields.io/badge/github-Callino%2Fhobex-lightgray.png?logo=github
-    :target: https://github.com/Callino/hobex/tree/18.0/pos_hobex
+    :target: https://github.com/Callino/hobex/tree/17.0/pos_hobex
     :alt: Callino/hobex
 
 |badge1| |badge2| |badge3|
