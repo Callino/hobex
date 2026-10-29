@@ -1,4 +1,4 @@
-.. image:: https://www.hobex.at/typo3conf/ext/ad65_core/Resources/Public/img/branding/hobex-logo.png
+.. image:: https://guides.hobex.at/_images/logos/hobex-logo-rgb.png
   :width: 260
   :alt: Hobex Logo
   :align: center
@@ -13,11 +13,14 @@ POS Hobex Terminal Integration
 .. |badge2| image:: https://img.shields.io/badge/licence-AGPL--3-blue.png
     :target: http://www.gnu.org/licenses/agpl-3.0-standalone.html
     :alt: License: AGPL-3
-.. |badge3| image:: https://img.shields.io/badge/github-hobex%2Fodoo-lightgray.png?logo=github
-    :target: https://github.com/hobex/odoo/tree/14.0/pos_hobex
-    :alt: hobex/odoo
+.. |badge3| image:: https://img.shields.io/badge/github-Callino%2Fhobex-lightgray.png?logo=github
+    :target: https://github.com/Callino/hobex/tree/20.0/pos_hobex
+    :alt: Callino/hobex
 
 |badge1| |badge2| |badge3|
+
+Dieser Branch enthält die Version für **Odoo 20.0**. Die anderen Odoo-Versionen
+liegen in den gleichnamigen Branches (``17.0``, ``18.0``, ``19.0``, ``20.0``).
 
 Dieses Modul ermöglicht das direkte Ansprechen unterstützter Terminals an der Odoo Kasse.
 Unterstützt werden alle Hobex Terminals, die das REST API unterstützen.
@@ -30,15 +33,8 @@ https://online.hobex.at/login
 
 Installation
 ============
-* Das Modul installieren
-* Kassensystem -> Konfiguration -> Zahlungsmethoden
-* Neue Zahlungsmethode anlegen
-* Ein Bank Journal auswählen oder eine neues erstellen
-* Zahlungsterminal Hobex auswählen
-* Terminal ID, Hobex Benutzer und Passwort ausfüllen
-* Auswahl zwischen Test Modus und Echt Modus
-* Mit dem Button "Verbindung testen" die Zugangsdaten prüfen
-* Sind die Daten korrekt, so verschwindet der Button "Verbindung testen" und man erhält die Möglichkeit eine Beispiel Transaktion zu tätigen.
+Installation und Einrichtung sind in der Modul-Anleitung beschrieben:
+`pos_hobex/README.rst <pos_hobex/README.rst>`_
 
 Credits
 =======
