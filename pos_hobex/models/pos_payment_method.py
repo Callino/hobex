@@ -27,6 +27,16 @@ class PosPaymentMethod(models.Model):
     def _get_payment_terminal_selection(self):
         return super()._get_payment_terminal_selection() + [('hobex', 'HOBEX')]
 
+    # Fields the module keeps up to date on its own: the token (daily cron and
+    # Check Connection) and the account flags mirrored from the profile (also
+    # refreshed during a refund). Core forbids every write on a payment method
+    # while a POS session uses it, so without this the token renewal failed for
+    # tills that stay open overnight and a changed refund flag broke the refund.
+    HOBEX_RUNTIME_FIELDS = {'hobex_auth_token', 'hobex_can_refund', 'hobex_can_void'}
+
+    def _is_write_forbidden(self, fields):
+        return super()._is_write_forbidden(set(fields) - self.HOBEX_RUNTIME_FIELDS)
+
     @api.depends('hobex_terminal_mode')
     def _compute_hobex_terminal_address(self):
         for method in self:
@@ -157,8 +167,11 @@ class PosPaymentMethod(models.Model):
             try:
                 method.hobex_get_auth_token()
             except Exception:
-                # Called from cron - so just ignore it here
-                pass
+                # Called from cron - keep going with the other methods, but
+                # leave a trace: a token that silently stops renewing only
+                # shows up later as failing payments at the till.
+                _logger.warning("hobex: renewing the token of method %s failed",
+                                method.id, exc_info=True)
 
     def hobex_get_auth_token(self):
         # Reads hobex_user / hobex_pass and writes hobex_auth_token, all of
